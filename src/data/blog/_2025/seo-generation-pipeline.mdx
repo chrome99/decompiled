@@ -1,6 +1,6 @@
 ---
 pubDatetime: 2025-03-02T12:00:00Z
-title: Building an SEO Content Generation Pipeline
+title: Building an AI Pipeline That Generates Readable Content
 featured: true
 draft: false
 ogImage: ../../../assets/images/seo-generation-pipeline.png
@@ -18,60 +18,61 @@ description: A practical guide to building a scalable SEO content pipeline using
 
 ## The Problem with AI Content
 
-If you want to create content for your website, you usually do it the old-fashioned way—write it yourself or hire someone to do it for you. That’s usually the best approach. AI is all the buzz right now, but its quality is unpredictable.
+We live in an age where online cats no longer fall from a wardrobe, or slap each other, or steal icecream from their owners. With the capabilities of AI, cats now do the dishes, ride motorcycles and fight sharks.
 
-We’ve all seen AI-generated content. We live in a time where AI-generated cats are washing dishes. AI works great with images and videos—get the right prompt, and you’re good to go. But text? That’s a different story. Large language models (LLMs) have a distinctive style that’s often unpleasant to read—too verbose, packed with jargon, and lacking human imperfections.
+Those kinds of visuals are easy to make with some prompt-tinkering. But text is a bit trickier:
+LLMs have a distinctive style that’s often unpleasant to read: Verbose, jargon-packed, and wrapped in the dull docility of marketing language. It lacks bite.
 
 Compare this:
 
 > Leveraging cutting-edge algorithms, our innovative solution synergizes deep learning methodologies [...]
 
-With actual engaging SEO content:
+With a paragraph written by a [software blogger](https://overreacted.io/what-is-javascript-made-of/):
 
-> If you’ve spent even five minutes in the Linux world, you’ve probably heard of Arch Linux. Maybe a hardcore Arch user has smugly told you, “I use Arch, btw,” or perhaps you’ve scrolled past countless memes about its infamous installation process.
+> Value: The concept of a value is a bit abstract. It’s a “thing”. A value to JavaScript is what a number is to math, or what a point is to geometry. When your program runs, its world is full of values. [...]
 
-However, AI-generated content isn’t impossible to get right. You just need to guide the LLM with precise style instructions and strong examples. There are some great content generation prompts available, and I encourage you to try them—the results might surprise you.
+However, AI-generated content isn’t impossible to get right. The usual tips - precise style instructions and strong examples - can give you a head start. But what is most crucial to understand is that AI doesn’t create value - it only helps to refine preexisting value.
 
-But let’s be real: AI alone doesn’t create value. It can help extract and refine value, but the real magic comes from injecting unique insights and original data. This is where web scraping comes in.
+So if you want to write original content with AI, you are going to need original data.
+
+And if you don't have original data, you can scrape it from the web.
 
 ---
 
-## The Big Picture: What We’re Trying to Build
+## What We’re Trying to Build
 
-To create a robust SEO content generation pipeline, the first step is to identify and scrape useful data from the web. Once we have raw data, an LLM can transform it into engaging, well-structured content. From there, optimizing the content for SEO ensures better visibility, and automated deployment makes sure the pages go live efficiently. The final piece of the puzzle is continuous improvement—monitoring ranking and engagement over time and refining the pipeline as needed.
+The idea is simple: You build a web crawler that loops over a list of URLs and dumps relevant data into JSON files or a database.
+The raw data is then processed by a series of prompts, which transform it into a fully readable article. At its core, this is a glorified Object-to-Paragraph / JSON-to-Article pipeline.
 
-## Page Layout: More Than Just a Wall of Text
+### The Tech Stack
 
-A long wall of text won’t keep anyone interested—this isn’t the 90s internet. The page should be mostly text, but it needs visual elements to keep it digestible. A clean structure makes a difference. Simple callout sections that highlight key takeaways, occasional infoboxes, and well-placed images can break up the content. Even small details like icons from Lucide or Font Awesome help guide the reader’s attention.
+- Because you want your website to rank highly on google, it's important to optimize for SEO. Textually, this mostly means using clear headings and relevant keywords.
+Performance wise, you need to be careful: excessive client-side rendering and large bundles can slow a page down.
+Static site generators like [Astro](https://astro.build/) help by offloading the costly rendering process from the client's browser. Instead this is done at build time, so that at runtime, the server's compute is utilized for quick serving.
 
-Sketching out a basic Figma design before building the page can be useful. It doesn’t have to be fancy—just enough to create a logical reading flow and avoid a cluttered presentation.
+- A database is essential for storing and querying all the scraped data. SQLite works well for a quick local setup, but if scalability is a concern, PostgreSQL is the better choice.
 
-## Architecture: The Tech Stack
+- The LLM is the backbone of content generation, and while [OpenAI](https://openai.com/api/) is the obvious go-to, AI Inference Providers (like [DeepInfra](https://deepinfra.com/) or [OpenRouter](https://openrouter.ai/)) allow you to experiment quickly with different open source models.
 
-A database is essential for storing and querying all the scraped data. SQLite works well for a quick local setup, but if scalability is a concern, PostgreSQL with Docker is the better choice. The LLM is the backbone of content generation, and while OpenAI is the obvious go-to, DeepInfra offers flexibility for experimenting with different models. I personally like LLama for its balance of quality and control.
+### Scraping and Cleaning Data
 
-When it comes to the frontend, the decision depends on whether the content is static or dynamic. Astro is great for static sites, while Next.js with SSR works better when user interaction, likes, or comments are part of the experience. Either way, integrating third-party APIs for analytics and engagement tracking is always a good idea.
+Websites that are ideal for scraping contain data alongside metadata (categories, tags). Metrics are also important for organizing data - likes, comments, shares.
 
-## Scraping Data: Finding Free and Useful Information
+The collected data needs to be cleaned and organized so we can make reasonable assumptins about its contents. This requires filtering, reformatting, and type standartization.
 
-Scraping data is tricky, mainly because of copyright concerns. The best approach is to target publicly available datasets, indexes, and structured metadata. Metrics like engagement stats—likes, comments, shares—are valuable when organizing and ranking content. Structured information, such as datasets linking books to authors or products to reviews, adds depth and enhances the usefulness of AI-generated pages.
-
-The key is making sure users stay engaged. Internal links need to be relevant, natural, and strategic. If someone lands on a page, the goal is to keep them clicking, exploring, and reading more.
-
-## Data Cleaning: Making Raw Data Usable
-
-Raw scraped data is rarely clean. Most of the time, it needs filtering, reformatting, and conversion. Sometimes, numbers need to be extracted from text, or HTML needs to be converted into Markdown. Another challenge is determining if a piece of data is actually useful—does it add value? Is it long enough to be engaging? These are the small but crucial refinements that separate valuable content from noise.
+Another challenge is determining whether a scrap of data is legitimately informative - where does it fit on the page? Does it add value or fluff?
 
 ## Prompt Engineering: The Hardest Part
 
-Crafting the right prompts is an art. The goal is to create a structured, readable page that doesn’t sound robotic. The trick is to allow the LLM some creative freedom—just enough to make the writing feel natural, but not so much that it loses structure. Instead of asking for a paragraph, it’s better to request a response in Markdown format with headings, lists, and tables.
+I'm generally in favor of Prompt-Tinkering rather than Prompt-Engineering. Prompting isn't the art it is sometimes made out to be. With that in mind:
 
-Taking inspiration from well-crafted prompts is helpful. Instructing the LLM to write conversationally, occasionally ask questions, and avoid excessive jargon improves the readability. Simplifying language as much as possible makes the content more engaging.
+- The trick is to allow the LLM some creative freedom - just enough to make the writing feel natural, but not so much that it loses structure.
+Instead of asking for a paragraph, it’s better to request a response in Markdown format with headings, lists, and tables.
 
-Breaking up paragraphs with visual components is also key. Whether the data comes from scraping or is generated by the LLM, sections that highlight important insights improve readability. The more structured and skimmable the page, the better.
+- Instructing the LLM to write conversationally, occasionally ask questions, and avoid excessive jargon improves the readability.
+Simplifying language as much as possible forces the LLM to avoid jargon.
 
-## Final Thoughts: Building the Pipeline Right
+- Taking inspiration from well-crafted prompts is helpful ([r/ChatGPTPromptGenuis](https://www.reddit.com/r/ChatGPTPromptGenius/) has many great examples).
 
-An SEO-optimized content pipeline isn’t just about churning out AI-generated articles. The real value comes from sourcing useful, structured data and refining it into meaningful insights. The LLM should enhance readability, not replace original thinking. A well-structured page with visuals, internal links, and strategic metadata makes all the difference.
-
-The beauty of this approach is that it scales. Instead of publishing generic AI-written pages, the pipeline creates a system where knowledge is curated, refined, and presented in a way that’s engaging and valuable. That’s how you build a content generation pipeline that actually works.
+## Finishing thoughts
+Let me know what you think in the comments below!
