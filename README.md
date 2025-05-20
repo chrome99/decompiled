@@ -1,4 +1,9 @@
-# Ezra's Blog
+<div align="center">
+<img src="https://github.com/user-attachments/assets/0a58e391-6c27-4965-b5da-b08d94382e69" alt="Decompiled Logo" width="500" />
+
+<h1>Decompiled</h1>
+
+</div>
 
 A personal blog about coding - what I'm learning, building, and thinking through.
 
