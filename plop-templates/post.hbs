@@ -1,0 +1,23 @@
+---
+title: "{{title}}"
+description: "{{description}}"
+pubDatetime: {{current-date}}
+featured: {{#if (includes flags "featured")}}true{{else}}false{{/if}}
+draft: {{#if (includes flags "draft")}}true{{else}}false{{/if}}
+tags:
+{{#each tags}}
+  - {{this}}
+{{/each}}
+# ogImage: "@/assets/images/{{slug}}.png"
+---
+
+{/*
+![alt text](@/assets/images/{{slug}}.png)
+*/}
+
+## Table of contents
+
+## Opening Header
+
+Write your blog post here.
+
