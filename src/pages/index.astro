@@ -11,7 +11,6 @@ import getSortedPosts from "@/utils/getSortedPosts";
 import IconRss from "@/assets/icons/IconRss.svg";
 import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
 import { SITE } from "@/config";
-import { SOCIALS } from "@/constants";
 
 const posts = await getCollection("blog");
 
@@ -43,11 +42,11 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
       </a>
 
       <p>
-      A personal log of what I’m learning, building, and exploring in code.
+        A personal log of what I’m learning, building, and exploring in code.
       </p>
       <div class="mt-4 flex flex-col sm:flex-row sm:items-center">
-          <div class="mr-2 mb-1 whitespace-nowrap sm:mb-0">Social Links:</div>
-          <Socials />
+        <div class="mr-2 mb-1 whitespace-nowrap sm:mb-0">Social Links:</div>
+        <Socials />
       </div>
     </section>
 

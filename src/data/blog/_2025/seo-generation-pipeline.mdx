@@ -47,8 +47,8 @@ The raw data is then processed by a series of prompts, which transform it into a
 ### The Tech Stack
 
 - Because you want your website to rank highly on google, it's important to optimize for SEO. Textually, this mostly means using clear headings and relevant keywords.
-Performance wise, you need to be careful: excessive client-side rendering and large bundles can slow a page down.
-Static site generators like [Astro](https://astro.build/) help by offloading the costly rendering process from the client's browser. Instead this is done at build time, so that at runtime, the server's compute is utilized for quick serving.
+  Performance wise, you need to be careful: excessive client-side rendering and large bundles can slow a page down.
+  Static site generators like [Astro](https://astro.build/) help by offloading the costly rendering process from the client's browser. Instead this is done at build time, so that at runtime, the server's compute is utilized for quick serving.
 
 - A database is essential for storing and querying all the scraped data. SQLite works well for a quick local setup, but if scalability is a concern, PostgreSQL is the better choice.
 
@@ -67,12 +67,13 @@ Another challenge is determining whether a scrap of data is legitimately informa
 I'm generally in favor of Prompt-Tinkering rather than Prompt-Engineering. Prompting isn't the art it is sometimes made out to be. With that in mind:
 
 - The trick is to allow the LLM some creative freedom - just enough to make the writing feel natural, but not so much that it loses structure.
-Instead of asking for a paragraph, it’s better to request a response in Markdown format with headings, lists, and tables.
+  Instead of asking for a paragraph, it’s better to request a response in Markdown format with headings, lists, and tables.
 
 - Instructing the LLM to write conversationally, occasionally ask questions, and avoid excessive jargon improves the readability.
-Simplifying language as much as possible forces the LLM to avoid jargon.
+  Simplifying language as much as possible forces the LLM to avoid jargon.
 
 - Taking inspiration from well-crafted prompts is helpful ([r/ChatGPTPromptGenuis](https://www.reddit.com/r/ChatGPTPromptGenius/) has many great examples).
 
 ## Finishing thoughts
+
 Let me know what you think in the comments below!
