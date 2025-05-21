@@ -1,4 +1,6 @@
-export default function (plop) {
+import type { NodePlopAPI } from 'plop';
+
+export default function (plop: NodePlopAPI) {
     plop.setHelper('current-date', () => new Date().toISOString());
     plop.setHelper('current-year', () => new Date().getFullYear());
     plop.setHelper('includes', (array, value) => array.includes(value));
@@ -15,7 +17,7 @@ export default function (plop) {
                 type: 'input',
                 name: 'slug',
                 message: 'Enter slug (file path):',
-                default: answers => answers.title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
+                default: (answers: { title: string }) => answers.title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
             },
             {
                 type: 'input',
