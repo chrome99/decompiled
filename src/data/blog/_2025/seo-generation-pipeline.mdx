@@ -1,6 +1,6 @@
 ---
 pubDatetime: 2025-03-02T12:00:00Z
-title: Building an AI Pipeline That Generates Readable Content
+title: Building an AI Pipeline That Generates Webpage Content
 featured: true
 draft: false
 ogImage: ../../../assets/images/seo-generation-pipeline.png
@@ -9,7 +9,7 @@ tags:
   - Scraping
   - LLM
   - Pipeline
-description: A practical guide to building a scalable SEO content pipeline using scraping, LLMs, and prompt engineering.
+description: Build an AI content pipeline that scrapes data and generates SEO-friendly articles.
 ---
 
 ![Sketch of a focused man working at a desk with a laptop and creative elements around him.](@/assets/images/seo-generation-pipeline.png)
@@ -42,7 +42,20 @@ And if you don't have original data, you can scrape it from the web.
 ## What We’re Trying to Build
 
 The idea is simple: You build a web crawler that loops over a list of URLs and dumps relevant data into JSON files or a database.
-The raw data is then processed by a series of prompts, which transform it into a fully readable article. At its core, this is a glorified Object-to-Paragraph / JSON-to-Article pipeline.
+The raw data is then processed by a series of prompts, which transform it into a fully readable article. At its core, this is a glorified Object-to-Paragraph / JSON-to-Article pipeline:
+
+```json
+{
+  "title": "Ikiru",
+  "year": 1952,
+  "director": "Akira Kurosawa",
+  "genre": ["Drama"],
+  "summary": "A bureaucrat with a terminal illness searches for meaning in his final days."
+}
+```
+
+> *Ikiru* (1952), directed by Akira Kurosawa, is a quiet, haunting drama about a dying bureaucrat’s search for meaning.
+  Faced with his mortality, he tries to break free from the routines of his life and do something that matters - if only once.
 
 ### The Tech Stack
 
@@ -54,26 +67,38 @@ The raw data is then processed by a series of prompts, which transform it into a
 
 - The LLM is the backbone of content generation, and while [OpenAI](https://openai.com/api/) is the obvious go-to, AI Inference Providers (like [DeepInfra](https://deepinfra.com/) or [OpenRouter](https://openrouter.ai/)) allow you to experiment quickly with different open source models.
 
-### Scraping and Cleaning Data
+| Component | Tool                                                                 | Why                              |
+| --------- | -------------------------------------------------------------------- | -------------------------------- |
+| Frontend  | [Astro](https://astro.build/)                                       | Fast static sites, great for SEO |
+| Database  | SQLite / PostgreSQL                                                 | Local dev vs scalable setup      |
+| LLM       | [OpenAI](https://openai.com/api/) / [DeepInfra](https://deepinfra.com/) | Content generation options       |
 
-Websites that are ideal for scraping contain data alongside metadata (categories, tags). Metrics are also important for organizing data - likes, comments, shares.
+### Scraping, Selecting, and Scrubbing Data
 
-The collected data needs to be cleaned and organized so we can make reasonable assumptins about its contents. This requires filtering, reformatting, and type standartization.
+Websites that are ideal for scraping include raw data, alongside metadata and metrics: Categories, tags, and likes. These make it much easier to organize and prioritize your precious scrap heap.
+
+You can also generate some metadata using LLM magic. LLMs are great at categorization, but things get risky when you try to generate metrics. Results intensify LLM biases, and are often unreliable or wacky.
+
+The collected data needs to be scrubbed clean and organized so we can make some reasonable assumptions about its structure. Essentially, we need to schematize the scrap soup. This requires some reformatting and type standardization.
 
 Another challenge is determining whether a scrap of data is legitimately informative - where does it fit on the page? Does it add value or fluff?
 
-## Prompt Engineering: The Hardest Part
+### Prompting
 
 I'm generally in favor of Prompt-Tinkering rather than Prompt-Engineering. Prompting isn't the art it is sometimes made out to be. With that in mind:
 
-- The trick is to allow the LLM some creative freedom - just enough to make the writing feel natural, but not so much that it loses structure.
+- Allow the LLM some creative freedom - just enough to make the writing feel natural, but not so much that it loses structure.
   Instead of asking for a paragraph, it’s better to request a response in Markdown format with headings, lists, and tables.
 
 - Instructing the LLM to write conversationally, occasionally ask questions, and avoid excessive jargon improves the readability.
   Simplifying language as much as possible forces the LLM to avoid jargon.
 
-- Taking inspiration from well-crafted prompts is helpful ([r/ChatGPTPromptGenuis](https://www.reddit.com/r/ChatGPTPromptGenius/) has many great examples).
+- Steal other people's prompts! (Check out [r/ChatGPTPromptGenuis](https://www.reddit.com/r/ChatGPTPromptGenius/))
 
-## Finishing thoughts
+- Only give the LLM the information it needs to perform its token prediction task - anything extra adds confusion.
 
-Let me know what you think in the comments below!
+---
+
+## Final thoughts
+
+Hope you had fun with this. Once you’ve tweaked the knobs and start getting results you’re happy with, it can be very satisfying to see it all come together.
