@@ -19,9 +19,6 @@ pnpm-debug.log*
 # pagefind
 public/pagefind
 
-# ideas for next blogs
-ideas.md
-
 # post drafts
 _*.mdx
 
