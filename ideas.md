@@ -1,7 +1,15 @@
 # Advanced Javascript
 ## Starting the article
+Syntactic sugar is a wonderful thing - it simplifies complexity, which is when of the hallmarks of great design.
+Day-to-day coding is hard enough and should be made simple and accesible as much as possible.
+BuHowever, the strength of syntactic sugar is also it's weakness - it inherently obscures the inner working of things. 
+  I've heard of people that work in these big companies, they have inner CI/CD layers and inner libraries.
+  They push code and don't know what happens to it - the work they do is entirely segmented and they lack an understanding of end-to-end application behavior.
+  A similar thing is already happening with programmers. The daily task at work is to push features and fix bugs. It isn't to understand.
+  There may be a planning phase accompaning a workflow, but it rarely amounts to studying.
+  In every company I worked with, there's very little time allowed for individual studying - instead employers often downplay complexity to avoid the time costs of learning.
 - [ ] Method to learn advanced Javascript
-  - [ ] About syntactic sugar: it's great for day-to-day programming, but obscures how things work.
+  About syntactic sugar: it's great for day-to-day programming, but obscures how things work.
 - [ ] Write about `Subjects - Basics`
   - [ ] Start with async / promises
   - [ ] Write the corresponding exercise - helps to clarify
