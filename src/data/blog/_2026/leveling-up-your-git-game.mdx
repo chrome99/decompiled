@@ -1,0 +1,264 @@
+---
+title: "Leveling up your git game"
+description: "Leveling up your git game is super fun and helpful"
+pubDatetime: 2026-04-25T21:31:17.838Z
+featured: false
+draft: false
+tags:
+  - git
+  - developer-tools
+  - productivity
+  - workflow
+  - cli
+ogImage: "@/assets/images/leveling-up-your-git-game.png"
+---
+
+![alt text](@/assets/images/leveling-up-your-git-game.png)
+
+## Table of contents
+
+## Why should you bother to learn advanced git?
+
+All developers use Git, but most only explore the shallow waters of what it offers. The stuff you need for daily driving—like `pull`, `push`, `stash`, and sometimes `cherry-pick`. There’s a large portion of the development world that’s blissfully unaware of advanced Git capabilities.
+
+This could be used as an argument against learning advanced Git: if you don’t need it for everyday usage, why bother? Surely there are better ways to impress suits at the next programming-themed convention. I think that’s fair. It’s just that for me, Git becomes super fun once you go beyond the basics, because once you have the knowledge, you naturally start creating your own workflows that are very low friction.
+
+Some might say you "become faster", but I think time is the wrong metric here. Even if you save a few minutes every day, I’m not sure that makes you more productive. A better way to put it is that Git starts to fit so well with your aims that every interaction with it feels smooth and enjoyable, so you stay fresh and have your energy intact for the more important tasks.
+
+With this in mind: all the tips here are things I actually use in my daily setup. I stripped away any gimmicks that make you look smart but aren’t actually useful.
+
+---
+
+## 1. Branch Movement
+
+```bash
+git switch my-branch
+git switch -
+git switch -c my-new-branch
+```
+
+* `git checkout` covers too much ground - you can safely replace it with `switch`, which only covers the branch switching part of `checkout` and has more predictable behavior.
+* `git switch -` toggles to the previous branch. You'll be spamming this in no time because most branch switches are just "go back to the other branch".
+
+## 2. Common Aliases
+
+You'd want to set a basic git alias in your `~/.zshrc` / `~/.bashrc` config to reduce brain-to-terminal latency.
+
+```bash
+# ~/.zshrc
+alias g='git'
+```
+
+You also want to shorten high-frequency commands to reduce friction - some of the commands I use:
+
+```ini
+# ~/.config/git/config
+[alias]
+  l = log --oneline
+  sw = switch
+  bk = switch -
+  c = commit
+  pl = pull
+  ps = push
+  rb = rebase
+  br = branch
+```
+
+## 3. Custom Commands: DRY egronomics
+
+Just like in React, it helps to know some advanced hooks, but eventually you’ll have your own logic that you’ll want to encapsulate.
+We often stress DRY code, but somehow don’t see the benefit of applying it to daily development - the place where we repeat ourselves the most.
+
+The best improvements to your workflow come from observing how you work and identifying areas of friction and repetition.
+
+Some ideas:
+
+### hop — run commands on another branch
+
+```ini
+# ~/.config/git/config
+[alias]
+  hop = "!f(){ t=\"$1\"; shift; git switch \"$t\" || exit; git \"$@\"; git switch -; }; f"
+```
+
+* Execute something elsewhere and immediately return
+* Avoid spamming `git switch`
+
+### backup — cheap safety net
+
+```ini
+# ~/.config/git/config
+[alias]
+  backup = !git branch bp/$(git branch --show-current)
+```
+
+* Useful snapshot 
+* So you can have fun rewriting history without extra worries
+
+### wtr / wtg — run across all worktrees
+
+```ini
+# ~/.config/git/config
+[alias]
+  wtr = "!f(){ git worktree list --porcelain | sed -n 's/^worktree //p' | while read -r wt; do echo \"==> $wt\"; (cd \"$wt\" && \"$@\"); done; }; f"
+  wtg = "!f(){ git worktree list --porcelain | sed -n 's/^worktree //p' | while read -r wt; do echo \"==> $wt\"; (cd \"$wt\" && git \"$@\"); done; }; f"
+```
+
+* `wtr` runs any shell command in every worktree, for example `git wtr npm install`
+* `wtg` does the same but prefixes git, for example `git wtg status`
+* saves a lot of manual `cd`-ing when you have work on several worktrees
+
+### rbm — smart merge
+
+```ini
+# ~/.config/git/config
+[alias]
+  rbm = "!f(){ target=\"$1\"; cur=$(git branch --show-current); git rebase \"$target\" && git switch \"$target\" && git merge --ff-only \"$cur\" && git switch \"$cur\"; }; f"
+```
+
+* Rebase + merge + go back to initial branch in one command
+* Uses fast-forward merge which avoids that extra merge commit
+* Keeps history linear and merges without spamming the commit history
+
+### fixup — edit history instantly
+
+```ini
+# ~/.config/git/config
+[alias]
+  fixup = "!f() { target=${1:-HEAD}; base=$(git rev-parse \"$target^\"); git commit --fixup=\"$target\" --no-edit && git -c sequence.editor=: rebase -i --autosquash \"$base\"; }; f"
+```
+
+* Attach a fix to any previous commit (default is HEAD)
+* immediately autosquash to clean history
+* No manual rebase step later
+
+Note: There's a cool `git absorb` command that's pretty similar, only it automatically infers the commit to which your changes belong. Check it out [here](https://github.com/tummychow/git-absorb).
+
+## 4. Smart stashing
+
+Stash is one of those commands that didn’t click for me at first. If you can reset and restore commits, why do you need an extra command to fake-commit?
+
+But stash is really about making quick changes to your working directory that are easily reversible. It's useful when you have a short interruption and need to make parts of your work disappear for a few minutes. That’s why selective stashing and named stashes matter - they let you cleanly separate work and easily recover it later.
+
+### Selective stashing
+
+```bash
+git stash --staged
+git stash --keep-index
+```
+
+* `--staged` to stash **only** what you staged
+* `--keep-index` to stash everything **except** what’s staged
+
+### Named stashes
+
+```bash
+git stash -m "wip: parsing fix"
+```
+
+* Important to label your stashes if you're going above that first stash
+
+### Don’t rely only on `pop`
+
+```bash
+git stash list
+git stash show stash@{0}
+git stash apply stash@{1}
+```
+
+* Inspect before applying
+* Apply exactly what you need, not just the latest
+
+### Turn stash into a branch
+
+```bash
+git stash branch fix-branch
+```
+
+* Clean way to pop the stash without polluting your current branch
+
+## 5. Interactive Rebase: Edit Commit History
+
+The key thing to understand about interactive rebase is that you can very easily edit your work history before your merge it. You can genuinely run `git commit -m "wip 3"` without feeling guilty anymore - because this is easily cleaned up later.
+
+A typical flow would be:
+```
+git rebase -i HEAD~5
+```
+This opens your last 5 commits in an editor, where you can reorder, squash, or drop them. This is how you decide what your final commit history should look like.
+
+With interactive rebase you can
+* Reorder commits
+* Drop commits
+* Edit messages
+* Squash multiple commits into one
+* Split one commit into multiple
+
+I find this rebase config to be clearer than the original:
+
+```ini
+# ~/.config/git/config
+[rebase]
+  abbreviateCommands = true
+  instructionFormat = %h %s
+```
+
+The key is to regularly rebase your feature branches before merging into `main` so it becomes second nature. With AI-generated commits, it’s even more important to review before merge.
+
+If the default “edit a text file” flow feels clunky, try:
+
+* [lazygit](https://github.com/jesseduffield/lazygit) - a Git TUI with a visual UI for reordering, squashing, and dropping commits
+* [fugitive](https://github.com/tpope/vim-fugitive) - a Neovim plugin that lets you rebase from the git log, inspect commits inline, and navigate everything with Vim motions
+
+## 6. Quick note on Worktrees
+
+Worktrees get a lot of talk these days, especially with AI workflows, but the core Git UX here is pretty minimal: creating one means attaching to an existing branch or explicitly creating a new one, then `cd`-ing into it, with no real support for setup or cleanup.
+
+In practice, you usually want some automation to install dependencies, set up local state, and clean up when done, so if you’re using multiple worktrees this quickly turns into repetitive manual work.
+
+Instead I'd recommend using tools like [worktrunk](https://github.com/max-sixty/worktrunk) which wrap this into a more complete workflow:
+
+```bash
+wt new feature-x
+wt list
+wt rm feature-x
+```
+
+* `wt new feature-x` - create a branch + worktree and run your custom setup 
+* `wt list` - shows all active worktrees in one place
+* `wt rm feature-x` - remove the worktree and clean up the branch
+
+## 7. Having Smoother Defaults
+
+Git has some annoying defaults - it can block you from doing certain things, or behave in ways you don’t expect.
+
+Some better alternatives:
+
+```ini
+# ~/.config/git/config
+[rebase]
+  autosquash = true
+  autoStash = true
+
+[stash]
+  includeUntracked = true
+
+[pull]
+  rebase = true
+```
+
+* `pull.rebase = true` - pulling rebases your work on top of upstream by default, so your `git pull` doesn't get blocked when your branch has local commits and has diverged from upstream.
+
+* `includeUntracked = true` - stash includes new files too, so your working directory is fully cleared instead of leaving things behind.
+
+* `autoStash = true` - git normally blocks a rebase if you have local changes. this stashes them automatically, rebases, then restores them.
+
+* `autosquash = true` - fixup commits are placed and squashed automatically during rebase, so cleanup is consistent and not something you have to manage manually. If you’re using the `fixup` command above, this is mostly redundant - but it keeps behavior consistent if you ever run a manual rebase.
+
+---
+
+## Final Thoughts
+
+So this is what I use day to day. Most of it is small, but together it makes Git more predictable and easier to work with. You spend less time dealing with it and more time actually working.
+
+If you want to try this out, pick one thing and use it for a few days. Keep what sticks, ignore what doesn’t, and that’s how you end up with a smarter workflow that works for you.
