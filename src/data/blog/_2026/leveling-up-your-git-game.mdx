@@ -25,9 +25,30 @@ This could be used as an argument against learning advanced Git: if you don’t 
 
 Some might say you "become faster", but I think time is the wrong metric here. Even if you save a few minutes every day, I’m not sure that makes you more productive. A better way to put it is that Git starts to fit so well with your aims that every interaction with it feels smooth and enjoyable, so you stay fresh and have your energy intact for the more important tasks.
 
-With this in mind: all the tips here are things I actually use in my daily setup. I stripped away any gimmicks that make you look smart but aren’t actually useful.
 
----
+## Quick aside: analyze your current workflow
+
+
+If you have a terminal open, try this with Claude Code / Codex / Opencode. It looks at your actual Git usage and suggests improvements based on what you’re already doing.
+
+```
+Analyze this user's Git habits.
+Read their global Git config and shell history (last 2–3 months).
+Count command usage and look for repeated patterns, especially chained commands.
+Cross-check against existing aliases to find gaps or redundant manual steps.
+
+Suggest:
+1. missing automation in their setup
+2. repeated patterns worth aliasing
+3. risky habits
+4. useful Git features they’re not using
+
+Keep everything grounded in actual usage.
+If they agree, write the changes to their Git config.
+```
+
+
+With that in mind, here’s what I actually use day to day.
 
 ## 1. Branch Movement
 
@@ -257,8 +278,22 @@ Some better alternatives:
 
 ---
 
-## Final Thoughts
+## Final Thoughts & Exercises
 
-So this is what I use day to day. Most of it is small, but together it makes Git more predictable and easier to work with. You spend less time dealing with it and more time actually working.
+So this is what I use day to day. Most of it is small, but together it makes Git more predictable and fun. If you want to try this out, here are two quick exercises:
 
-If you want to try this out, pick one thing and use it for a few days. Keep what sticks, ignore what doesn’t, and that’s how you end up with a smarter workflow that works for you.
+### 1. Turn one messy commit into many
+
+Make a single large commit with a few unrelated changes. Then run: `git rebase -i HEAD~1`. Split it into multiple smaller commits.
+
+* You might need to look up the exact steps - the key idea is to stop at that commit, undo it, and then recreate it as several smaller ones.
+
+### 2. Fix a commit that isn’t `HEAD`
+
+Make a few commits, then go back and add a small change that belongs to an earlier commit. Use your `fixup` command to attach it to the correct commit and autosquash it.
+
+* Once you’ve done this once, it becomes a natural way to fix things in place instead of adding new commits at the end.
+
+---
+
+Cheers and happy coding!
