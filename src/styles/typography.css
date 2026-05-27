@@ -7,6 +7,9 @@
   .prose a {
     @apply break-words hover:!text-accent;
   }
+  .prose iframe {
+    @apply mx-auto rounded-lg border-2 border-border;
+  }
   .prose thead th:first-child,
   tbody td:first-child,
   tfoot td:first-child {

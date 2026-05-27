@@ -231,16 +231,16 @@ If the default “edit a text file” flow feels clunky, try:
 * [lazygit](https://github.com/jesseduffield/lazygit) - a Git TUI with a visual UI for reordering, squashing, and dropping commits
 * [fugitive](https://github.com/tpope/vim-fugitive) - a Neovim plugin that lets you rebase from the git log, inspect commits inline, and navigate everything with Vim motions
 
-<!-- ## git diff! -->
-<!---->
-<!-- 1. you can diff most files. not that you would want to. but for sqlite files it makes a ton of sense, even if you are not comitting it (git ignored files) -->
-<!-- 2. diff with ast! incomprehensible that most people don't use this -->
+{/* ## git diff! */}
+{/**/}
+{/* 1. you can diff most files. not that you would want to. but for sqlite files it makes a ton of sense, even if you are not comitting it (git ignored files) */}
+{/* 2. diff with ast! incomprehensible that most people don't use this */}
 
 ## 6. Quick note on Worktrees
 
-<!-- - add about syncwt -->
-<!-- - consolidate wtr wtg into this section -->
-<!-- - use stashes to move code between worktrees? or maybe just teleport command that isn't tied to git? -->
+{/* - add about syncwt */}
+{/* - consolidate wtr wtg into this section */}
+{/* - use stashes to move code between worktrees? or maybe just teleport command that isn't tied to git? */}
 
 Worktrees get a lot of talk these days, especially with AI workflows, but the core Git UX here is pretty minimal: creating one means attaching to an existing branch or explicitly creating a new one, then `cd`-ing into it, with no real support for setup or cleanup.
 
@@ -285,13 +285,13 @@ Some better alternatives:
 
 * `autosquash = true` - fixup commits are placed and squashed automatically during rebase, so cleanup is consistent and not something you have to manage manually. If you’re using the `fixup` command above, this is mostly redundant - but it keeps behavior consistent if you ever run a manual rebase.
 
-<!-- ## git bisect -->
-<!---->
-<!-- - add git bisect section. explain conceptually. also short practical example. -->
-<!---->
-<!-- ## git history excavations (log blame etc.) -->
-<!---->
-<!-- explain conceptually. maybe tricks with claude? maybe mention Agam's prompt of finding common issues or repeating issues across repos. -->
+{/* ## git bisect */}
+{/**/}
+{/* - add git bisect section. explain conceptually. also short practical example. */}
+{/**/}
+{/* ## git history excavations (log blame etc.) */}
+{/**/}
+{/* explain conceptually. maybe tricks with claude? maybe mention Agam's prompt of finding common issues or repeating issues across repos. */}
 
 ---
 
