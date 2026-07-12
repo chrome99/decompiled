@@ -1,0 +1,179 @@
+---
+title: "Building Synthetic Data"
+description: "What I learned building synthetic-data pipelines"
+pubDatetime: 2026-07-12T11:37:17.019Z
+featured: false
+draft: false
+tags:
+  - data
+  - llm
+ogImage: "@/assets/images/building-synthetic-data.png"
+---
+
+![alt text](@/assets/images/building-synthetic-data.png)
+
+## Table of contents
+
+## Why should you bother learning about synthetic data?
+
+Synthetic data has become one of those AI terms that somehow means everything. Depending on who you ask, it can mean generating a few extra training examples, creating fake tabular datasets, simulating users, or asking an LLM to populate an entire application.
+
+I don't think any of those definitions are completely wrong, but after spending the better part of a year building synthetic-data pipelines, I think they miss the interesting part. When I started, I assumed most of the work would be prompting. You give the model a lot of context, find a good collection of examples, tweak the prompt until the output looks convincing, and then scale it up.
+
+That's honestly not an unreasonable approach for a small project. If you need a hundred product reviews or a few example support tickets, you can probably get pretty far with one script and a decent prompt. Things start getting weird once you're trying to generate a complete environment with thousands of records spread across several applications.
+
+The larger our generators became, the less time we spent thinking about prompts. Instead we found ourselves working on schemas, dependency graphs, deterministic generation, retries, checkpoints, validation, cross-database references and QA tooling. At some point the project stopped feeling like an AI experiment and started feeling like an unusually complicated data-engineering system that happened to contain an LLM.
+
+Looking back, I think that's the main thing people get wrong about synthetic data. They imagine that the LLM is the generator. In practice, the generator is the entire system around it.
+
+## 1. Start with the purpose, not realism
+
+The first question people usually ask about generated data is whether it looks realistic. I used to ask the same thing, but I'm not sure realism is a useful goal by itself. You can spend an enormous amount of time making something more statistically realistic without making it any more useful.
+
+Suppose you're generating data for an AI agent that needs to operate inside an enterprise application. The agent probably isn't going to export the database into Pandas and study the activity distribution of every employee. It will open an inbox, search for a document, inspect a ticket and perhaps send a reply. Most people will never experience your dataset as a dataset. They'll experience it through a UI, an API or some limited collection of tools.
+
+That changes what matters. Maybe it doesn't matter that the twenty-third most active employee created slightly too many tickets. It probably does matter that the information required to complete the task actually exists, that the relevant records can be found, and that they tell a coherent enough story for the agent to understand what happened.
+
+This could be used as an argument for ignoring realism entirely, which I don't think is right either. If everything feels obviously generated, the environment won't be very useful. The point is just that realism should serve the purpose of the dataset rather than becoming a vague objective that absorbs unlimited engineering time.
+
+Before improving a generator, it helps to ask what the consumer will actually see and what failure would matter to them. That sounds obvious, but it saves you from polishing a lot of things that only look impressive from a bird's-eye view.
+
+## 2. You're not generating records. You're generating a world.
+
+This took me longer to realize than it probably should have. Most synthetic-data examples generate one object at a time: an email, a Slack conversation, a Jira ticket, an invoice. That's exactly how I approached it in the beginning as well, because individual records are easy to reason about and easy to demo.
+
+The problem is that real systems don't behave like collections of isolated records. An email references yesterday's meeting. The meeting discusses a ticket. The ticket links to a design document. Someone later shares that document in a chat, and three weeks afterwards another person refers to the same project while explaining why a deadline moved.
+
+Once enough of those connections start appearing, you're no longer generating objects independently. You're generating several views into the same underlying reality. Outlook, Slack, Jira and the rest of the simulated applications are simply different windows into one world.
+
+That realization changes how you think about the data. A ticket shouldn't only have a title and description. It has a lifecycle. It was created by someone for a reason, perhaps moved between several statuses, accumulated comments and eventually got resolved, abandoned or reopened. The same applies to purchase requests, invoices, documents, incidents and almost everything else worth generating.
+
+Not every entity needs an elaborate history, of course. Real databases contain plenty of boring rows. But if every ticket is newly created, every request is pending and every conversation begins five minutes ago, the environment feels strangely frozen. A believable world contains things at different points in their lifecycle because the world was supposedly there before the user arrived.
+
+I think this is also where the term world-building becomes useful. It sounds slightly grand for a collection of SQLite files, but it describes the job better than record generation does. You're deciding what exists, what happened before, how different systems relate to one another and what parts of that history are visible from each application.
+
+## 3. Give the world a source of truth
+
+Once several systems need to agree about the same entities, it becomes awkward to let every generator invent them independently. If the email generator creates its own employees and the ticket generator creates another set, you'll either end up with obvious contradictions or spend a lot of time trying to reconcile facts that should never have diverged.
+
+We eventually created one canonical dataset containing the shared facts about the simulated organization: employees, departments, managers, teams, customers, vendors, products and similar entities. We happened to call it the company database, but the name isn't important. You could call it a master dataset, a world database or something unnecessarily impressive involving the word ontology.
+
+The useful part is that other generators no longer need to invent the same facts. They can ask who works in Finance, who manages a particular employee, which vendors exist or which projects belong to a department. Outlook can generate mail for the same people who appear in Slack, while a purchasing system can reuse vendors and financial details that already exist elsewhere.
+
+I don't think you should necessarily begin by designing a giant canonical database, though. It's very easy to spend weeks modeling the universe before generating anything useful. A better approach is to build a few datasets, notice which facts repeatedly need to agree, and gradually move those facts into a shared source of truth.
+
+That process also reveals what is genuinely shared. Employees probably belong there. A random UI preference for one simulated application probably doesn't. The canonical dataset should describe the world, not become a dumping ground for every field that appears anywhere in the simulation.
+
+The broader lesson is that shared abstractions often emerge from actual duplication. Once multiple generators keep asking the same questions, it probably makes sense to answer them in one place.
+
+## 4. Truth first. Text second.
+
+This became one of the most useful rules in the entire project, even though I definitely didn't start there. Initially I wanted the LLM to invent as much as possible. After all, invention is supposedly the point.
+
+The funny thing is that the more complex our generators became, the less freedom we wanted to give the model over facts.
+
+Take something like a purchase request. You could ask an LLM to create a realistic request and let it choose the employee, department, amount, vendor, status, approval chain and dates. The result might look convincing in isolation, but now all of those facts only exist inside a paragraph of text. If another application needs to refer to the same request, or if you later need to validate its approval history, you have to recover structure from prose the model improvised.
+
+Instead, decide the facts first. Choose the employee, department, vendor, amount, project, status, dates and approvers using deterministic code. Write those facts into the database, and only then ask the LLM to produce the description, approval note or email discussing the request.
+
+The pipeline decides what happened. The LLM decides how people talk about it.
+
+Once you make that separation, prompting becomes much easier. The model doesn't need to invent an organization, understand an approval policy and construct a valid timeline while also trying to write a natural paragraph. It receives the facts that matter and turns them into text.
+
+This applies to almost everything. Before generating a conversation, decide who is involved, what they are discussing, whether the situation is urgent, whether someone made a mistake, which files are attached and roughly how the conversation ends. Before writing a ticket description, decide the underlying issue, affected project, status and history.
+
+A good rule is that if you would need to parse the text later to discover an important fact, that fact probably should have been decided before the text was written. LLMs are good at expression, but they're a fairly inconvenient database.
+
+## 5. Richness beats statistical neatness
+
+When people discuss realistic data, they often reach for distributions. Different users should have different activity levels, departments should create different volumes of records, and statuses should appear at plausible rates. All of that can be useful, particularly if the downstream task depends on aggregate properties.
+
+I'm just not convinced that's where most of the feeling of realism comes from.
+
+The datasets that felt most believable to me were usually the ones that had richness and variety. Conversations covered different subjects, contained different kinds of attachments, had different levels of formality and were written by people with noticeably different styles. Some threads were long and technical, while others consisted of one person asking a question and never receiving an answer.
+
+The same idea applies to other entities. Some tickets are brand new, some have been reopened several times, some are blocked on another team and some were quietly abandoned. A document might contain a polished proposal, meeting notes, an unfinished draft or a spreadsheet someone attached with almost no explanation.
+
+None of those ideas are especially difficult by themselves. The trick is having enough of them, and having them combine in ways that continue producing new situations.
+
+This is where small modifiers become extremely useful. A conversation can be urgent or casual, resolved or unresolved, internal or customer-facing, technical or administrative. It might include an image, refer to an older thread, involve people who know each other well or contain a slightly awkward disagreement between departments.
+
+If you decide those properties before generating the text, the model receives a much more interesting situation to write about. You also avoid relying on the LLM to spontaneously remember every type of variation you care about. Most models are happy to generate endless friendly, well-structured workplace conversations unless you give them reasons not to.
+
+Variety isn't the same as randomness. Randomness can easily produce noise. Richness comes from having many meaningful decisions that correspond to situations that could actually occur.
+
+## 6. Build a pipeline, not a giant prompt
+
+If you spend enough time working with LLMs, eventually someone will ask why you don't simply put everything into one enormous prompt. That's actually close to how I imagined these systems working in the beginning: give the model the company, the requirements and the schemas, then ask it to generate the whole thing.
+
+The problem is that giant prompts don't compose particularly well. If your ticket generator isn't creating enough reopened tickets, you shouldn't need to regenerate every employee, project and conversation. If one text-enrichment step fails, you probably don't want to restart several hours of deterministic work.
+
+Over time we naturally moved toward many small instructions. One stage creates users, another creates projects, another creates tickets, and later stages add comments or generated text. Each instruction receives a checkpoint, modifies one logical part of the database and leaves another checkpoint behind.
+
+The exact tools don't matter much here. We used an orchestrator, SQLite checkpoints and an ORM, but the more general idea is simply to make every stage inspectable and independently retryable. One large prompt gives you one large failure. A pipeline gives you somewhere to look.
+
+It also makes development much less frustrating. When you improve one part of the generator, you can resume close to that stage instead of rebuilding the entire world. If an LLM provider fails halfway through a run, completed deterministic work doesn't disappear. Cheap safety nets are nice in Git, and they turn out to be nice in synthetic-data pipelines too.
+
+We also separated deterministic structure from non-deterministic language. The same seed should produce the same employees, tickets, dates and relationships, while the exact wording of a comment or email can vary. That gives you reproducible facts without forcing every piece of prose to sound identical.
+
+This isn't particularly exotic. It's mostly the same lesson software engineering keeps teaching us in different costumes: small components are easier to understand, test and replace than one impressive blob.
+
+## 7. Validation slowly becomes the whole project
+
+At the beginning, validation felt like something that happened after generation. Run the pipeline, open the application, look around for a few minutes and fix whatever seems strange.
+
+That works until the obvious mistakes disappear.
+
+As the generators improve, the remaining problems become increasingly specific. A timestamp is technically valid but appears before the entity it depends on. A reference points to a record that existed in an earlier version of another database. A request reaches a state that the real application would never allow. A generated paragraph mentions a fact that contradicts the structured fields beside it.
+
+Eventually the workflow becomes a loop: generate data, inspect it, find something strange, improve the generator and run it again. The generator gets better because the validators get smarter, and the validators get smarter because the generator keeps finding new ways to surprise you.
+
+At some point I realized we were spending more time thinking about validation than prompting. Looking back, that makes sense. Writing text was never the hard part. Defining what good data means was.
+
+Some checks are straightforward. Foreign keys should resolve, dates should appear in a valid order, required entities should exist and important states should be represented. Other checks are more subjective, such as whether conversations are repetitive, whether a user's behavior is coherent across systems or whether the dataset contains enough variety.
+
+LLMs can be useful here as reviewers rather than generators. You can ask several agents to inspect samples, score particular qualities, explain what feels wrong and include confidence levels. They won't replace deterministic validation, but they can surface qualitative problems that are difficult to encode as SQL assertions.
+
+The important thing is to give the audits a specific target. Asking an agent whether a database is realistic tends to produce vague advice about distributions and diversity. Asking whether an AI user could infer the history of a particular request, or whether anything in a conversation contradicts the underlying records, produces much more useful feedback.
+
+Validation is not only the last stage of generation. In practice, it becomes one of the main ways you design the generator.
+
+## 8. Not every inconsistency is worth fixing
+
+For a while I thought the goal was making every system agree perfectly. I don't believe that anymore.
+
+Real organizations are inconsistent. Meetings remain on calendars after being cancelled. Documents become outdated. Someone marks themselves out of office and still joins a call. Two systems can display slightly different information because one was updated later than the other.
+
+Those mismatches aren't necessarily unrealistic. Some of them are simply what happens when many people and systems interact over time.
+
+The inconsistencies worth fixing are the ones that produce a jarring moment. An employee sends an email several months after leaving the company. An invoice is approved before it was submitted. A meeting repeatedly discusses a project that doesn't exist anywhere else. These make the consumer stop following the story and start noticing the generator.
+
+That distinction matters because perfect consistency is expensive. Every new invariant creates more code, validation and coupling between pipelines. If a mismatch doesn't affect the task, doesn't damage the broader story and resembles something that regularly happens in real systems, removing it may not be worth the effort.
+
+I wouldn't intentionally inject mistakes just to make data look human. That can become a strange form of realism theatre. The point is simply that the objective isn't to produce a mathematically pristine world. It's to produce one that is coherent where coherence matters and imperfect where imperfection is harmless.
+
+Engineers naturally want to eliminate every inconsistency. Reality is less interested in maintaining referential integrity.
+
+## 9. Prompting, finally
+
+Prompting still matters, but by this point it becomes a much smaller and more ordinary part of the system. Once the facts, relationships and modifiers already exist, most prompts can be short and focused.
+
+Give the model only the information it needs for the current field. Tell it which facts are fixed, what it must not invent and what kind of output you expect. A prompt that writes one notification body or one comment is easier to test and retry than a prompt responsible for producing an entire database.
+
+I also prefer giving the model some creative freedom over language while keeping structure outside its control. It can decide how formal someone sounds, which words they use and how they phrase an apology. It should not quietly change the amount of an invoice or invent a manager who doesn't exist.
+
+Examples are still helpful, particularly when you care about a specific writing style. Scraped data, public datasets and manually written samples can all provide useful source material. Scraping is one way to acquire raw data, but it isn't the core of the generator. The more important work is deciding how that material gets normalized, represented and used.
+
+Model choice matters less than people sometimes suggest as well. A stronger model can improve prose and follow complicated instructions more reliably, but it won't repair a confused data model. Better architecture tends to improve the output of every model you plug into it.
+
+## Final thoughts
+
+When I started building synthetic-data pipelines, I thought the main challenge would be getting an LLM to invent convincing records. I expected to spend most of my time experimenting with prompts and comparing models.
+
+The AI is obviously important, and without it these environments would be far less expressive. But once the project grows, most of the work begins to look surprisingly familiar: schemas, pipelines, versioning, dependencies, retries, validation, quality assurance and a slightly unreasonable number of edge cases.
+
+The LLM is one component in a much larger system. In our case it might account for five or ten percent of the overall thinking. The rest is deciding what the world contains, how its parts relate to each other and how you know when something has gone wrong.
+
+Looking back, I think the biggest mistake was treating synthetic data as record generation. You're not really generating an email, a ticket or a conversation. You're constructing a world, and those records are simply different windows into it.
+
+Once the world already exists, writing about it turns out to be the easy part.
