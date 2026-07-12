@@ -10,6 +10,8 @@ tags:
 ogImage: "@/assets/images/building-synthetic-data.png"
 ---
 
+import SyntheticWorld from "@/components/SyntheticWorld";
+
 ![alt text](@/assets/images/building-synthetic-data.png)
 
 ## Table of contents
@@ -101,6 +103,10 @@ This is where small modifiers become extremely useful. A conversation can be urg
 If you decide those properties before generating the text, the model receives a much more interesting situation to write about. You also avoid relying on the LLM to spontaneously remember every type of variation you care about. Most models are happy to generate endless friendly, well-structured workplace conversations unless you give them reasons not to.
 
 Variety isn't the same as randomness. Randomness can easily produce noise. Richness comes from having many meaningful decisions that correspond to situations that could actually occur.
+
+Here's that idea you can actually poke at. Each entity is just a handful of structured decisions with a pool of values. Change a decision, or re-roll them all, and watch the prompt and the resulting record change with it. The text is the last step, not the generator.
+
+<SyntheticWorld client:visible />
 
 ## 6. Build a pipeline, not a giant prompt
 
