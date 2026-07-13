@@ -62,3 +62,27 @@ html[data-theme="dark"] {
     padding: 0;
 }
 
+/* Synthetic World island — staggered "stream in" reveal + REPL caret.
+   Elements set their own animation-delay inline so the whole module types
+   itself in without any layout reflow (opacity/translate only). */
+@keyframes synth-fade-up {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes synth-blink {
+  0%, 49%  { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.synth-in {
+  animation: synth-fade-up 0.26s ease-out both;
+}
+.synth-caret {
+  display: inline-block;
+  width: 0.5em;
+  animation: synth-blink 1.05s step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .synth-in { animation: none; }
+  .synth-caret { animation: none; opacity: 1; }
+}
+
