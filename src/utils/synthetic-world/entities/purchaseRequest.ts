@@ -1,18 +1,15 @@
 // 7. Purchase request or invoice — finance / procurement.
 
 import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
-
-const template =
-    'Create a purchase request from {{requester}} in {{department}} to buy from ' +
-    '{{vendor}} for {{amount}} ({{category}}). Urgency: {{urgency}}. Approval ' +
-    'state: {{approvalState}}.';
 
 export const purchaseRequest: EntityDefinition = {
     id: 'purchase-request',
     title: 'Purchase Request',
     description: 'A procurement request with an approval lifecycle.',
     icon: 'receipt',
+    strategy: 'deterministic',
+    strategyLabel: 'deterministic',
+    outputName: 'record',
     modifiers: [
         {
             key: 'requester',
@@ -27,7 +24,7 @@ export const purchaseRequest: EntityDefinition = {
         {
             key: 'vendor',
             label: 'Vendor',
-            values: ['Datadog', 'WeWork', 'Figma', 'AWS', 'a boutique agency', 'Staples'],
+            values: ['a cloud provider', 'a co-working space', 'a design tool vendor', 'an office supplier', 'a boutique agency', 'a catering service'],
         },
         {
             key: 'amount',
@@ -50,8 +47,10 @@ export const purchaseRequest: EntityDefinition = {
             values: ['software', 'office space', 'contractor', 'cloud infra', 'supplies', 'travel'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
+    buildTrace: () => [
+        { kind: 'comment', text: '# a purchase request is a form — pure data, no model' },
+        { kind: 'code', text: 'record = build.purchase_request(decisions)' },
+    ],
     buildSample: (m) => ({
         kind: 'record',
         fields: {

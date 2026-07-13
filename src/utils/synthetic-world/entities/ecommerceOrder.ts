@@ -1,18 +1,15 @@
 // 8. Ecommerce order — commerce.
 
 import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
-
-const template =
-    'Generate an ecommerce order: {{quantity}}x {{product}} for a {{customerType}} ' +
-    'customer, {{shippingSpeed}} shipping, paid by {{paymentMethod}}{{discount}}. ' +
-    'The order is currently {{orderState}}.';
 
 export const ecommerceOrder: EntityDefinition = {
     id: 'ecommerce-order',
     title: 'Ecommerce Order',
     description: 'A storefront order somewhere in its fulfilment lifecycle.',
     icon: 'shopping-cart',
+    strategy: 'deterministic',
+    strategyLabel: 'deterministic',
+    outputName: 'order',
     modifiers: [
         {
             key: 'product',
@@ -50,8 +47,10 @@ export const ecommerceOrder: EntityDefinition = {
             values: [', no discount', ', with a 10% coupon', ', with free shipping', ', on clearance'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
+    buildTrace: () => [
+        { kind: 'comment', text: '# an order is rows in a table — assembled, not written' },
+        { kind: 'code', text: 'order = build.order(decisions)' },
+    ],
     buildSample: (m) => ({
         kind: 'record',
         fields: {

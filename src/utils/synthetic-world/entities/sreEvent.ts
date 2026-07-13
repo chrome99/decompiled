@@ -1,18 +1,15 @@
 // 6. SRE error event or log — observability.
 
 import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
-
-const template =
-    'Write an incident log for a {{severity}} on {{service}} in {{environment}}. ' +
-    'It lasted {{duration}}, root cause was {{rootCause}}, customer impact was ' +
-    '{{customerImpact}}. The incident is now {{status}}.';
 
 export const sreEvent: EntityDefinition = {
     id: 'sre-event',
     title: 'SRE Error Event',
     description: 'An observability log entry for a production incident.',
     icon: 'siren',
+    strategy: 'deterministic',
+    strategyLabel: 'deterministic',
+    outputName: 'event',
     modifiers: [
         {
             key: 'severity',
@@ -50,8 +47,10 @@ export const sreEvent: EntityDefinition = {
             values: ['mitigated', 'resolved', 'investigating', 'monitoring', 'postmortem scheduled'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
+    buildTrace: () => [
+        { kind: 'comment', text: '# an incident log is emitted by systems, not written by a model' },
+        { kind: 'code', text: 'event = build.incident(decisions)' },
+    ],
     buildSample: (m) => {
         const levelWord = m.severity === 'SEV1' || m.severity === 'SEV2' ? 'ERROR' : 'WARN';
         return {

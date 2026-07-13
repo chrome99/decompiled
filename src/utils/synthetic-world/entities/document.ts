@@ -1,17 +1,21 @@
-// 4. Document or spreadsheet — productivity.
+// 4. PDF document — productivity. A formatted page is a fixed layout fed the
+// decisions: a deterministic template engine, no model. The "content" is
+// field-derived structure (headings, rows), not prose.
 
-import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
+import type { EntityDefinition, Modifiers } from '../types';
 
-const template =
-    'Generate a {{format}} titled "{{title}}" — a {{docType}} owned by {{department}}. ' +
-    'It is currently {{status}}, last edited by {{lastEditor}}, marked {{sensitivity}}.';
+function version(m: Modifiers): string {
+    return `v${(m.title.length % 4) + 1}.${m.status.length % 9}`;
+}
 
 export const document: EntityDefinition = {
     id: 'document',
-    title: 'Document / Spreadsheet',
-    description: 'A productivity artifact somewhere in its editing lifecycle.',
+    title: 'PDF Document',
+    description: 'A formatted document rendered from a fixed layout.',
     icon: 'file-text',
+    strategy: 'pdf',
+    strategyLabel: 'deterministic PDF',
+    outputName: 'pdf',
     modifiers: [
         {
             key: 'docType',
@@ -35,33 +39,39 @@ export const document: EntityDefinition = {
         },
         {
             key: 'format',
-            label: 'Format',
-            values: ['doc', 'spreadsheet', 'slide deck'],
+            label: 'Page size',
+            values: ['A4', 'US Letter'],
         },
         {
-            key: 'lastEditor',
-            label: 'Last editor',
+            key: 'owner',
+            label: 'Owner',
             values: ['Dana', 'Priya', 'Marco', 'Lena', 'an external contractor'],
         },
         {
             key: 'sensitivity',
             label: 'Sensitivity',
-            values: ['public', 'internal', 'confidential', 'restricted'],
+            values: ['Public', 'Internal', 'Confidential', 'Restricted'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
+    buildTrace: () => [
+        { kind: 'comment', text: '# a formatted page is a fixed layout — a template engine, not a model' },
+        { kind: 'code', text: "pdf = render_pdf(decisions, template='doc_v2')" },
+    ],
     buildSample: (m) => ({
-        kind: 'record',
-        fields: {
-            title: m.title,
-            type: m.docType,
-            format: m.format,
-            owner: m.department,
-            status: m.status,
-            lastEditedBy: m.lastEditor,
-            sensitivity: m.sensitivity,
-            version: `v${(m.title.length % 4) + 1}.${m.status.length % 9}`,
-        },
+        kind: 'pdf',
+        title: m.title,
+        classification: m.sensitivity,
+        meta: `${m.docType} · ${m.department} · ${m.status} · ${m.format} · ${version(m)}`,
+        sections: [
+            {
+                heading: '1. Overview',
+                lines: [`Owner: ${m.owner}`, `Department: ${m.department}`, `Status: ${m.status}`],
+            },
+            {
+                heading: '2. Details',
+                lines: [`Type: ${m.docType}`, `Classification: ${m.sensitivity}`, `Revision: ${version(m)}`],
+            },
+        ],
+        footer: `Page 1 of 1 · ${m.sensitivity} · SynthCorp`,
     }),
 };

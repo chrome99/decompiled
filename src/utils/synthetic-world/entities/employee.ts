@@ -1,18 +1,36 @@
-// 1. Employee profile — HR.
+// 1. Employee profile — HR. Hybrid: the record is pure code, but the one-line
+// bio is prose, so it takes a single model call.
 
-import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
+import type { EntityDefinition, Modifiers } from '../types';
 
-const template =
-    'Generate an HR profile for a {{level}} {{role}} in {{department}}, based in ' +
-    '{{location}}, employed {{employmentType}} with {{tenure}} of tenure. Current ' +
-    'employment status: {{status}}.';
+const FIRST_NAMES = ['Dana', 'Priya', 'Marco', 'Lena', 'Sam', 'Ingrid', 'Tomas'];
+
+function nameFor(m: Modifiers): string {
+    // Deterministic name pick from the chosen values (no extra randomness).
+    const idx = (m.role.length + m.location.length) % FIRST_NAMES.length;
+    return `${FIRST_NAMES[idx]} ${m.department.slice(0, 1)}.`;
+}
+
+// Stand-in for the model: a one-line bio assembled deterministically, but the
+// point is that in a real pipeline this single field is the only LLM call.
+function writeBio(m: Modifiers): string {
+    const arc =
+        m.status === 'Notice period' || m.status === 'Offboarding'
+            ? 'now wrapping up their time here'
+            : m.status === 'Probation'
+              ? 'still in their first stretch'
+              : `${m.tenure} in and going strong`;
+    return `${nameFor(m)} is a ${m.level.toLowerCase()} ${m.role.toLowerCase()} on the ${m.department} team out of ${m.location}, ${arc}.`;
+}
 
 export const employee: EntityDefinition = {
     id: 'employee',
     title: 'Employee Profile',
     description: 'An HR record for a person in the simulated org.',
     icon: 'user',
+    strategy: 'hybrid',
+    strategyLabel: 'code + 1 LLM call',
+    outputName: 'record',
     modifiers: [
         {
             key: 'department',
@@ -50,25 +68,31 @@ export const employee: EntityDefinition = {
             values: ['Active', 'On leave', 'Notice period', 'Probation', 'Offboarding'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
-    buildSample: (m) => {
-        const first = ['Dana', 'Priya', 'Marco', 'Lena', 'Sam', 'Ingrid', 'Tomas'];
-        // Deterministic name pick from the chosen values (no extra randomness).
-        const idx = (m.role.length + m.location.length) % first.length;
-        const name = `${first[idx]} ${m.department.slice(0, 1)}.`;
-        return {
-            kind: 'record',
-            fields: {
-                name,
-                title: `${m.level} ${m.role}`,
-                department: m.department,
-                location: m.location,
-                employmentType: m.employmentType,
-                tenure: m.tenure,
-                status: m.status,
-                employeeId: `EMP-${(m.department.charCodeAt(0) + m.role.length).toString().padStart(4, '0')}`,
-            },
-        };
-    },
+    buildTrace: () => [
+        { kind: 'comment', text: '# every structured field is pure data — assembled, not written' },
+        { kind: 'code', text: 'record = build.employee(decisions)' },
+        { kind: 'comment', text: '# one field is prose, so a single model call fills it in:' },
+        {
+            kind: 'prompt',
+            label: 'bio_prompt',
+            template:
+                'Write a one-line bio for a {{level}} {{role}} in {{department}}, based in {{location}}, {{tenure}} in.',
+        },
+        { kind: 'code', text: 'record.bio = model(bio_prompt)', accent: true },
+    ],
+    buildSample: (m) => ({
+        kind: 'record',
+        fields: {
+            name: nameFor(m),
+            title: `${m.level} ${m.role}`,
+            department: m.department,
+            location: m.location,
+            employmentType: m.employmentType,
+            tenure: m.tenure,
+            status: m.status,
+            employeeId: `EMP-${(m.department.charCodeAt(0) + m.role.length).toString().padStart(4, '0')}`,
+            bio: writeBio(m),
+        },
+        llmFields: ['bio'],
+    }),
 };

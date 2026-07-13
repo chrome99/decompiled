@@ -1,17 +1,30 @@
-// 5. Sunset image prompt — media.
+// 5. Sunset image — media. Image model: pixels can't be templated, so the
+// decisions become a descriptive prompt and a diffusion model paints it. The
+// returned image is mocked here with a palette-derived gradient.
 
 import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
 
 const template =
-    'A sunset over {{location}} at {{timeOfDay}}, rendered as a {{medium}}, ' +
-    '{{weather}} skies, {{composition}}, {{palette}} palette, evoking a {{mood}} mood.';
+    'A sunset over {{location}} at {{timeOfDay}}, rendered as {{medium}}: ' +
+    '{{weather}} skies, {{composition}}, a {{palette}} palette; the mood is {{mood}}.';
+
+// Stand-in for the image the model would return: a gradient keyed to the palette.
+const GRADIENTS: Record<string, [string, string, string]> = {
+    'warm amber': ['#7c2d12', '#ea580c', '#fcd34d'],
+    'cool violet': ['#312e81', '#7c3aed', '#f0abfc'],
+    'muted pastel': ['#8a7468', '#e8b4a0', '#fce7d8'],
+    'high-contrast': ['#0b1020', '#ef4444', '#fde047'],
+    monochrome: ['#1f2937', '#6b7280', '#e5e7eb'],
+};
 
 export const sunsetImage: EntityDefinition = {
     id: 'sunset-image',
-    title: 'Sunset Image Prompt',
-    description: 'An image-generation prompt assembled from visual decisions.',
+    title: 'Sunset Image',
+    description: 'An image described by decisions and painted by a model.',
     icon: 'sunset',
+    strategy: 'image-model',
+    strategyLabel: 'image model',
+    outputName: 'image',
     modifiers: [
         {
             key: 'location',
@@ -49,11 +62,15 @@ export const sunsetImage: EntityDefinition = {
             values: ['warm amber', 'cool violet', 'muted pastel', 'high-contrast', 'monochrome'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
+    buildTrace: () => [
+        { kind: 'comment', text: "# pixels can't be templated — you describe it, a model paints it" },
+        { kind: 'prompt', label: 'prompt', template },
+        { kind: 'code', text: 'image = image_model(prompt, steps=30)', accent: true },
+    ],
     buildSample: (m) => ({
-        kind: 'image-prompt',
-        prompt: interpolate(template, m),
-        tags: [m.medium, m.timeOfDay, m.weather, m.mood, m.palette].map((t) => t.replace(/\s+/g, '-')),
+        kind: 'image',
+        caption: `${m.medium} · 1024×1024 · diffusion model`,
+        tags: [m.timeOfDay, m.weather, m.mood, m.palette].map((t) => t.replace(/\s+/g, '-')),
+        gradient: GRADIENTS[m.palette] ?? GRADIENTS['warm amber'],
     }),
 };

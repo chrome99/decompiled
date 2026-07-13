@@ -6,25 +6,23 @@
 // seed -> same decisions -> same world; re-roll the seed and you get a
 // completely different one, without touching the "text" step at all.
 
-import type { EntityDefinition, Generation, Modifiers } from './types';
+import type { EntityDefinition, Generation } from './types';
 import { entities, getEntityDefinition, entityIndex } from './registry';
 import { mulberry32, randomSeed, nextSeed, pickModifiers, generationIdFrom } from './random';
 
-export type { EntityDefinition, Generation, Modifiers, ModifierDef, SampleOutput } from './types';
+export type {
+    EntityDefinition,
+    Generation,
+    Modifiers,
+    ModifierDef,
+    SampleOutput,
+    Strategy,
+    TraceBlock,
+} from './types';
 
 /** Every entity definition, for building menus / tabs in the UI. */
 export function getEntities(): EntityDefinition[] {
     return entities;
-}
-
-/** The raw prompt template (with {{placeholders}}) for one entity. */
-export function renderPromptTemplate(entityId: string): string {
-    return getEntityDefinition(entityId).promptTemplate;
-}
-
-/** Fill an entity's prompt template with a supplied set of modifier values. */
-export function renderFilledPrompt(entityId: string, modifiers: Modifiers): string {
-    return getEntityDefinition(entityId).buildPrompt(modifiers);
 }
 
 /**
@@ -39,8 +37,7 @@ export function generateEntityWithSeed(entityId: string, seed: number): Generati
     return {
         entity,
         modifiers,
-        promptTemplate: entity.promptTemplate,
-        filledPrompt: entity.buildPrompt(modifiers),
+        trace: entity.buildTrace(modifiers),
         sampleOutput: entity.buildSample(modifiers),
         generationId: generationIdFrom(entityId, seed),
     };

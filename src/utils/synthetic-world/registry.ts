@@ -2,26 +2,26 @@
 
 import type { EntityDefinition } from './types';
 import { employee } from './entities/employee';
-import { booking } from './entities/booking';
+import { flight } from './entities/flight';
 import { thread } from './entities/thread';
 import { document } from './entities/document';
 import { sunsetImage } from './entities/sunsetImage';
 import { sreEvent } from './entities/sreEvent';
 import { purchaseRequest } from './entities/purchaseRequest';
 import { ecommerceOrder } from './entities/ecommerceOrder';
-import { jiraTicket } from './entities/jiraTicket';
+import { issueTicket } from './entities/issueTicket';
 
 /** All nine entity definitions, in a fixed display order. */
 export const entities: EntityDefinition[] = [
     employee,
-    booking,
+    flight,
     thread,
     document,
     sunsetImage,
     sreEvent,
     purchaseRequest,
     ecommerceOrder,
-    jiraTicket,
+    issueTicket,
 ];
 
 const byId = new Map<string, EntityDefinition>(entities.map((e) => [e.id, e]));

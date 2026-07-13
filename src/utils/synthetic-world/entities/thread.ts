@@ -1,79 +1,141 @@
-// 3. Slack / Teams thread — communication.
+// 3. Team chat thread — communication. LLM multi-turn: a dialogue can't be
+// templated, so it's generated turn by turn, each prompt built from the running
+// history. The "model" here is stubbed with deterministic templates, but the
+// bouncing structure — prompt → reply → feed forward → prompt — is real.
 
-import type { EntityDefinition } from '../types';
-import { interpolate } from '../interpolate';
+import type { EntityDefinition, Modifiers, TraceBlock } from '../types';
 
-const template =
-    'Write a chat thread ({{tone}}, {{urgency}}) between {{participants}} who are ' +
-    '{{relationship}}, about "{{subject}}". It includes {{attachment}} and ends ' +
-    'with the conversation being {{outcome}}.';
+type Turn = { speaker: string; template: string; reply: string };
+
+/** Split "Priya & Dana" into ["Priya", "Dana"]. */
+function speakers(m: Modifiers): [string, string] {
+    const [a, b] = m.participants.split(' & ');
+    return [a ?? 'A', b ?? 'B'];
+}
+
+// The stand-in for the model. In a real pipeline each of these is an LLM call;
+// here they're deterministic so the demo reproduces, but they read like replies.
+function reply(intent: 'open' | 'respond' | 'resolve', m: Modifiers): string {
+    const [, b] = speakers(m);
+    if (intent === 'open') {
+        const lead =
+            m.urgency === 'urgent' || m.urgency === 'time-sensitive'
+                ? `hey ${b} — quick one on ${m.subject}, need eyes now.`
+                : `hey ${b}, when you get a sec — about ${m.subject}.`;
+        return m.attachment === 'nothing'
+            ? lead
+            : `${lead} dropping ${m.attachment} so we're looking at the same thing.`;
+    }
+    if (intent === 'respond') {
+        return m.tone === 'terse'
+            ? `looking now. what's off exactly?`
+            : `got it — took a look. so the issue is ${m.subject.replace(/^the /, '')}?`;
+    }
+    // resolve
+    switch (m.outcome) {
+        case 'escalated':
+            return `ok this is bigger than us — looping in the lead.`;
+        case 'left open':
+            return `hmm. let me dig a bit and get back to you.`;
+        case 'punted to a meeting':
+            return `let's grab 15 min tomorrow and close it out.`;
+        case 'agreed next steps':
+            return `great — I'll take the first step, you take the second.`;
+        default:
+            return `that clears it up. thanks — marking this ${m.outcome}.`;
+    }
+}
+
+/** Run the turn loop: build each prompt from history, "call the model", append. */
+function simulate(m: Modifiers): Turn[] {
+    const [a, b] = speakers(m);
+    const plan: { speaker: string; intent: 'open' | 'respond' | 'resolve'; template: string }[] = [
+        {
+            speaker: a,
+            intent: 'open',
+            template: `Open the thread as ${a}, who is {{relationship}} with ${b}. Tone: {{tone}}, urgency: {{urgency}}. Subject: {{subject}}. Reference {{attachment}}.`,
+        },
+        {
+            speaker: b,
+            intent: 'respond',
+            template: `Reply as ${b}. They just said: "{{prev}}". Hold the {{tone}} tone and ask about {{subject}}.`,
+        },
+        {
+            speaker: a,
+            intent: 'resolve',
+            template: `Reply as ${a}. So far: "{{prev}}". Bring the thread to: {{outcome}}.`,
+        },
+    ];
+
+    const turns: Turn[] = [];
+    let prev = '';
+    for (const step of plan) {
+        // The prompt literally interpolates the previous reply — the "bounce".
+        const template = step.template.replace('{{prev}}', prev || '(nothing yet)');
+        const text = reply(step.intent, m);
+        turns.push({ speaker: step.speaker, template, reply: text });
+        prev = text;
+    }
+    return turns;
+}
 
 export const thread: EntityDefinition = {
     id: 'thread',
-    title: 'Slack / Teams Thread',
-    description: 'A short chat conversation with a shape decided up front.',
+    title: 'Team Chat Thread',
+    description: 'A short conversation generated one prompt at a time.',
     icon: 'message-square',
+    strategy: 'llm-multi',
+    strategyLabel: 'LLM · multi-turn',
+    outputName: 'thread',
     modifiers: [
         {
             key: 'participants',
             label: 'Participants',
-            values: ['Dana and Priya', 'the whole #payments channel', 'Marco and a customer', 'three on-call engineers', 'Legal and Sales'],
+            values: ['Priya & Dana', 'Marco & a customer', 'a PM & an engineer', 'Legal & Sales', 'on-call & their lead'],
         },
         {
             key: 'relationship',
             label: 'Relationship',
-            values: ['close teammates', 'in different departments', 'manager and report', 'meeting for the first time', 'old colleagues'],
-        },
-        {
-            key: 'urgency',
-            label: 'Urgency',
-            values: ['routine', 'time-sensitive', 'urgent', 'no rush'],
+            values: ['close teammates', 'in different departments', 'manager & report', 'meeting for the first time'],
         },
         {
             key: 'subject',
             label: 'Subject',
-            values: ['the Q3 launch slipping', 'a failing deploy', 'a confusing invoice', 'weekend on-call coverage', 'a customer escalation'],
-        },
-        {
-            key: 'attachment',
-            label: 'Attachment',
-            values: ['a screenshot', 'a linked doc', 'a stack trace', 'a spreadsheet', 'no attachment'],
+            values: ['the Q3 invoice mismatch', 'a failing deploy', 'weekend on-call cover', 'a customer escalation', 'the launch slipping'],
         },
         {
             key: 'tone',
             label: 'Tone',
-            values: ['friendly', 'terse', 'anxious', 'joking', 'slightly tense'],
+            values: ['friendly', 'terse', 'anxious', 'lightly tense', 'joking'],
+        },
+        {
+            key: 'urgency',
+            label: 'Urgency',
+            values: ['no rush', 'routine', 'time-sensitive', 'urgent'],
+        },
+        {
+            key: 'attachment',
+            label: 'Attachment',
+            values: ['a screenshot', 'a linked doc', 'a stack trace', 'a spreadsheet', 'nothing'],
         },
         {
             key: 'outcome',
             label: 'Outcome',
-            values: ['resolved', 'escalated', 'left unanswered', 'punted to a meeting', 'agreed on next steps'],
+            values: ['resolved', 'escalated', 'left open', 'punted to a meeting', 'agreed next steps'],
         },
     ],
-    promptTemplate: template,
-    buildPrompt: (m) => interpolate(template, m),
-    buildSample: (m) => {
-        const opener =
-            m.urgency === 'urgent' || m.urgency === 'time-sensitive'
-                ? `hey — quick one about ${m.subject}, need eyes now`
-                : `when you get a sec, wanted to chat about ${m.subject}`;
-        const middle =
-            m.attachment === 'no attachment'
-                ? `nothing to share yet, just wanted to flag it`
-                : `dropping ${m.attachment} here so we're looking at the same thing`;
-        const closer =
-            m.outcome === 'left unanswered'
-                ? `…`
-                : m.outcome === 'escalated'
-                  ? `ok this is bigger than us, looping in the lead`
-                  : `great, ${m.outcome}. thanks!`;
-        return {
-            kind: 'conversation',
-            messages: [
-                { author: 'A', text: opener },
-                { author: 'B', text: middle },
-                { author: 'A', text: closer },
-            ],
-        };
+    buildTrace: (m) => {
+        const blocks: TraceBlock[] = [
+            { kind: 'comment', text: '# dialogue is generated turn by turn — each prompt built from the history' },
+            { kind: 'code', text: 'thread = simulate_thread(decisions)', accent: true },
+        ];
+        simulate(m).forEach((t, i) => {
+            blocks.push({ kind: 'turn', n: i + 1, speaker: t.speaker, template: t.template });
+        });
+        return blocks;
     },
+    buildSample: (m) => ({
+        kind: 'conversation',
+        messages: simulate(m).map((t) => ({ author: t.speaker, text: t.reply })),
+    }),
 };
