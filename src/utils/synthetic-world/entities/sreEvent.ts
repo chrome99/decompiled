@@ -1,5 +1,3 @@
-// 6. SRE error event or log — observability.
-
 import type { EntityDefinition } from '../types';
 
 export const sreEvent: EntityDefinition = {

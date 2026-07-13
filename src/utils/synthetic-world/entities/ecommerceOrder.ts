@@ -1,6 +1,6 @@
-// 8. Ecommerce order — commerce.
-
 import type { EntityDefinition } from '../types';
+
+const STEPS = ['placed', 'packed', 'shipped', 'delivered'];
 
 export const ecommerceOrder: EntityDefinition = {
     id: 'ecommerce-order',
@@ -44,23 +44,26 @@ export const ecommerceOrder: EntityDefinition = {
         {
             key: 'discount',
             label: 'Discount',
-            values: [', no discount', ', with a 10% coupon', ', with free shipping', ', on clearance'],
+            values: ['no discount', '10% coupon', 'free shipping', 'clearance'],
         },
     ],
     buildTrace: () => [
         { kind: 'comment', text: '# an order is rows in a table — assembled, not written' },
         { kind: 'code', text: 'order = build.order(decisions)' },
     ],
-    buildSample: (m) => ({
-        kind: 'record',
-        fields: {
-            orderId: `#${(m.product.length * 811 + m.quantity.length).toString().padStart(6, '0')}`,
-            item: `${m.quantity}x ${m.product}`,
+    buildSample: (m) => {
+        const stepIndex = STEPS.indexOf(m.orderState);
+        return {
+            kind: 'order',
+            number: `#${(m.product.length * 811 + m.quantity.length).toString().padStart(6, '0')}`,
+            item: `${m.quantity}× ${m.product}`,
             customer: m.customerType,
-            shipping: m.shippingSpeed,
             payment: m.paymentMethod,
-            discount: m.discount.replace(/^,\s*/, '') || 'none',
-            status: m.orderState,
-        },
-    }),
+            discount: m.discount,
+            steps: STEPS,
+            // On the happy path, how far along the stepper; -1 once it fell off it.
+            current: stepIndex,
+            terminal: stepIndex === -1 ? m.orderState : null,
+        };
+    },
 };

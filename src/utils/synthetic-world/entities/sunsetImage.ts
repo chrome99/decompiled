@@ -1,14 +1,10 @@
-// 5. Sunset image — media. Image model: pixels can't be templated, so the
-// decisions become a descriptive prompt and a diffusion model paints it. The
-// returned image is mocked here with a palette-derived gradient.
-
 import type { EntityDefinition } from '../types';
 
 const template =
     'A sunset over {{location}} at {{timeOfDay}}, rendered as {{medium}}: ' +
     '{{weather}} skies, {{composition}}, a {{palette}} palette; the mood is {{mood}}.';
 
-// Stand-in for the image the model would return: a gradient keyed to the palette.
+// The image the model would return, mocked as a gradient keyed to the palette.
 const GRADIENTS: Record<string, [string, string, string]> = {
     'warm amber': ['#7c2d12', '#ea580c', '#fcd34d'],
     'cool violet': ['#312e81', '#7c3aed', '#f0abfc'],

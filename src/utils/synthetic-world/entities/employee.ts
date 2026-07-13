@@ -1,18 +1,13 @@
-// 1. Employee profile — HR. Hybrid: the record is pure code, but the one-line
-// bio is prose, so it takes a single model call.
-
 import type { EntityDefinition, Modifiers } from '../types';
 
 const FIRST_NAMES = ['Dana', 'Priya', 'Marco', 'Lena', 'Sam', 'Ingrid', 'Tomas'];
 
 function nameFor(m: Modifiers): string {
-    // Deterministic name pick from the chosen values (no extra randomness).
     const idx = (m.role.length + m.location.length) % FIRST_NAMES.length;
     return `${FIRST_NAMES[idx]} ${m.department.slice(0, 1)}.`;
 }
 
-// Stand-in for the model: a one-line bio assembled deterministically, but the
-// point is that in a real pipeline this single field is the only LLM call.
+// The one field a model writes; deterministic here so the demo reproduces.
 function writeBio(m: Modifiers): string {
     const arc =
         m.status === 'Notice period' || m.status === 'Offboarding'
@@ -43,9 +38,10 @@ export const employee: EntityDefinition = {
             values: ['Junior', 'Mid-level', 'Senior', 'Staff', 'Principal', 'Lead'],
         },
         {
+            // Department-neutral so no pairing ever reads oddly (no "Engineer in Legal").
             key: 'role',
             label: 'Role',
-            values: ['Software Engineer', 'Accountant', 'Account Executive', 'Recruiter', 'Counsel', 'Support Agent', 'PMM'],
+            values: ['Analyst', 'Specialist', 'Associate', 'Coordinator', 'Generalist', 'Partner', 'Advisor'],
         },
         {
             key: 'tenure',
@@ -81,18 +77,13 @@ export const employee: EntityDefinition = {
         { kind: 'code', text: 'record.bio = model(bio_prompt)', accent: true },
     ],
     buildSample: (m) => ({
-        kind: 'record',
-        fields: {
-            name: nameFor(m),
-            title: `${m.level} ${m.role}`,
-            department: m.department,
-            location: m.location,
-            employmentType: m.employmentType,
-            tenure: m.tenure,
-            status: m.status,
-            employeeId: `EMP-${(m.department.charCodeAt(0) + m.role.length).toString().padStart(4, '0')}`,
-            bio: writeBio(m),
-        },
-        llmFields: ['bio'],
+        kind: 'badge',
+        name: nameFor(m),
+        title: `${m.level} ${m.role}`,
+        department: m.department,
+        employeeId: `EMP-${(m.department.charCodeAt(0) + m.role.length).toString().padStart(4, '0')}`,
+        location: m.location,
+        status: m.status,
+        bio: writeBio(m),
     }),
 };

@@ -446,26 +446,262 @@ function TraceView({
     );
 }
 
-// ── The sample artifact, in its native shape ─────────────────────────────────
+// ── The sample artifact — each entity renders as the real thing ──────────────
 
-function RecordView({ output }: { output: Extract<SampleOutput, { kind: 'record' }> }) {
-    const llm = new Set(output.llmFields ?? []);
+type Tone = 'neutral' | 'good' | 'bad' | 'accent';
+
+const PILL_TONE: Record<Tone, string> = {
+    neutral: 'bg-muted/40 text-foreground/60',
+    good: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    bad: 'bg-red-500/15 text-red-600 dark:text-red-400',
+    accent: 'bg-accent/15 text-accent',
+};
+
+const GOOD = ['confirmed', 'ticketed', 'checked in', 'boarding', 'approved', 'paid', 'delivered', 'done', 'Active'];
+const BAD = ['cancelled', 'rejected', 'refunded', 'returned', 'waitlisted', 'wont-fix', 'blocked', 'Offboarding'];
+
+function statusTone(s: string): Tone {
+    if (GOOD.includes(s)) return 'good';
+    if (BAD.includes(s)) return 'bad';
+    return 'neutral';
+}
+
+function Pill({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
+    return <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${PILL_TONE[tone]}`}>{label}</span>;
+}
+
+/** Marks the one field a model wrote (on the hybrids). */
+function LlmTag() {
     return (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
-            {Object.entries(output.fields).map(([k, v], i) => (
-                <div key={k} className="synth-in contents" style={{ animationDelay: `${i * 35}ms` }}>
-                    <dt className="text-foreground/45">{k}</dt>
-                    <dd className="font-semibold break-words">
-                        {String(v)}
-                        {llm.has(k) && (
-                            <span className="ml-2 rounded bg-accent/15 px-1 py-0.5 text-[9px] font-bold tracking-wide text-accent align-middle">
-                                LLM
-                            </span>
-                        )}
-                    </dd>
+        <span className="ml-1.5 rounded bg-accent/15 px-1 py-0.5 align-middle text-[9px] font-bold tracking-wide text-accent">
+            LLM
+        </span>
+    );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <div className="text-[9px] tracking-wide text-foreground/40 uppercase">{label}</div>
+            <div className="text-[12px] font-semibold break-words">{value}</div>
+        </div>
+    );
+}
+
+/** Deterministic fake barcode from a seed string. */
+function Barcode({ seed }: { seed: string }) {
+    const bars = Array.from({ length: 44 }, (_, i) => (seed.charCodeAt(i % seed.length) + i * 7) % 3);
+    return (
+        <div className="mt-3 flex h-8 items-stretch gap-px">
+            {bars.map((w, i) => (
+                <div
+                    key={i}
+                    style={{ width: `${w + 1}px` }}
+                    className={i % 4 === 0 ? 'bg-foreground/30' : 'bg-foreground/80'}
+                />
+            ))}
+        </div>
+    );
+}
+
+function BoardingPass({ output }: { output: Extract<SampleOutput, { kind: 'boarding-pass' }> }) {
+    return (
+        <div className="overflow-hidden rounded-lg border border-border bg-muted/10">
+            <div className="flex items-center justify-between bg-accent px-3 py-1.5 text-background">
+                <span className="flex items-center gap-1.5 text-xs font-bold">
+                    <LuPlane className="h-3.5 w-3.5" />
+                    {output.airline}
+                </span>
+                <span className="text-[10px] tracking-widest uppercase">Boarding Pass</span>
+            </div>
+            <div className="flex">
+                <div className="flex-1 p-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold">{output.from}</span>
+                        <LuPlane className="h-4 w-4 text-accent" />
+                        <span className="text-2xl font-bold">{output.to}</span>
+                    </div>
+                    <div className="mt-1 text-[10px] text-foreground/45">{output.travelerType}</div>
+                    <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2">
+                        <Field label="Passenger" value={output.passenger} />
+                        <Field label="Flight" value={output.flightNo} />
+                        <Field label="Date" value={output.date} />
+                        <Field label="Cabin" value={output.cabin} />
+                        <Field label="PNR" value={output.pnr} />
+                    </div>
+                    <Barcode seed={output.pnr + output.flightNo} />
+                </div>
+                <div className="flex w-24 shrink-0 flex-col items-center justify-center gap-1 border-l border-dashed border-border p-3 text-center">
+                    <div className="text-[9px] tracking-wide text-foreground/40 uppercase">Seat</div>
+                    <div className="text-3xl font-bold text-accent">{output.seat}</div>
+                    <Pill label={output.status} tone={statusTone(output.status)} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BadgeCard({ output }: { output: Extract<SampleOutput, { kind: 'badge' }> }) {
+    const initials = output.name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2);
+    return (
+        <div className="mx-auto max-w-[17rem] overflow-hidden rounded-lg border border-border bg-muted/10">
+            <div className="h-8 bg-accent" />
+            <div className="flex flex-col items-center gap-1 px-4 pb-4">
+                <div className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full border-2 border-background bg-accent/20 text-lg font-bold text-accent">
+                    {initials}
+                </div>
+                <div className="text-sm font-bold">{output.name}</div>
+                <div className="text-[11px] text-foreground/60">{output.title}</div>
+                <Pill label={output.status} tone={statusTone(output.status)} />
+                <div className="mt-2 grid w-full grid-cols-2 gap-2">
+                    <Field label="Department" value={output.department} />
+                    <Field label="ID" value={output.employeeId} />
+                    <Field label="Location" value={output.location} />
+                </div>
+                <div className="mt-2 w-full rounded bg-accent/5 p-2 text-[11px] leading-snug text-foreground/70">
+                    <span className="italic">{output.bio}</span>
+                    <LlmTag />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const APPROVAL_STAMP: Record<string, { word: string; color: string }> = {
+    approved: { word: 'APPROVED', color: '#15803d' },
+    paid: { word: 'PAID', color: '#15803d' },
+    rejected: { word: 'REJECTED', color: '#b91c1c' },
+    draft: { word: 'DRAFT', color: '#b45309' },
+    'pending manager': { word: 'PENDING', color: '#b45309' },
+    'pending finance': { word: 'PENDING', color: '#b45309' },
+};
+
+function InvoiceSlip({ output }: { output: Extract<SampleOutput, { kind: 'invoice' }> }) {
+    const stamp = APPROVAL_STAMP[output.approval] ?? { word: output.approval.toUpperCase(), color: '#b45309' };
+    return (
+        <div className="relative mx-auto max-w-[17rem] overflow-hidden rounded-sm bg-[#fbfbf7] p-4 text-[#1a1a1a] shadow-md ring-1 ring-black/10">
+            <div className="flex items-center justify-between border-b border-dashed border-black/25 pb-2">
+                <span className="text-xs font-bold tracking-wide">PURCHASE REQUEST</span>
+                <span className="text-[11px]">{output.number}</span>
+            </div>
+            <div className="mt-2 space-y-0.5 text-[11px] text-black/70">
+                <div className="flex justify-between gap-2">
+                    <span>Requester</span>
+                    <span className="text-right">{output.requester}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                    <span>Vendor</span>
+                    <span className="text-right">{output.vendor}</span>
+                </div>
+            </div>
+            <div className="mt-3 flex justify-between border-t border-black/15 pt-2 text-[11px]">
+                <span>{output.lineItem}</span>
+                <span className="font-semibold">{output.amount}</span>
+            </div>
+            <div className="mt-1 flex justify-between border-t-2 border-black/40 pt-1 text-xs font-bold">
+                <span>TOTAL</span>
+                <span>{output.amount}</span>
+            </div>
+            <div
+                className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 -rotate-12 rounded border-2 px-2 py-0.5 text-sm font-black tracking-wider uppercase opacity-80"
+                style={{ color: stamp.color, borderColor: stamp.color }}
+            >
+                {stamp.word}
+            </div>
+        </div>
+    );
+}
+
+function Stepper({ steps, current, terminal }: { steps: string[]; current: number; terminal: string | null }) {
+    if (terminal) {
+        return (
+            <div className="mt-3 flex items-center gap-2">
+                <Pill label={terminal} tone="bad" />
+                <span className="text-[11px] text-foreground/45">order did not complete</span>
+            </div>
+        );
+    }
+    return (
+        <div className="mt-3 flex items-start">
+            {steps.map((s, i) => (
+                <div key={s} className="flex flex-1 flex-col items-center">
+                    <div className="flex w-full items-center">
+                        <div className={`h-0.5 flex-1 ${i === 0 ? 'opacity-0' : i <= current ? 'bg-accent' : 'bg-border'}`} />
+                        <div
+                            className={`h-3 w-3 shrink-0 rounded-full ${
+                                i < current ? 'bg-accent' : i === current ? 'bg-accent ring-2 ring-accent/30' : 'bg-border'
+                            }`}
+                        />
+                        <div
+                            className={`h-0.5 flex-1 ${
+                                i === steps.length - 1 ? 'opacity-0' : i < current ? 'bg-accent' : 'bg-border'
+                            }`}
+                        />
+                    </div>
+                    <span className={`mt-1 text-[10px] ${i <= current ? 'text-foreground/70' : 'text-foreground/35'}`}>
+                        {s}
+                    </span>
                 </div>
             ))}
-        </dl>
+        </div>
+    );
+}
+
+function OrderSlip({ output }: { output: Extract<SampleOutput, { kind: 'order' }> }) {
+    return (
+        <div className="rounded-lg border border-border bg-muted/10 p-3">
+            <div className="flex items-center justify-between">
+                <span className="text-xs font-bold">Order {output.number}</span>
+                <span className="text-[11px] text-foreground/50">
+                    {output.customer} · {output.payment}
+                </span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm font-semibold">{output.item}</span>
+                {output.discount !== 'no discount' && <Pill label={output.discount} tone="accent" />}
+            </div>
+            <Stepper steps={output.steps} current={output.current} terminal={output.terminal} />
+        </div>
+    );
+}
+
+const PRIORITY_COLOR: Record<string, string> = { P0: '#ef4444', P1: '#f97316', P2: '#eab308', P3: '#64748b' };
+
+function TicketCard({ output }: { output: Extract<SampleOutput, { kind: 'ticket-card' }> }) {
+    return (
+        <div
+            className="rounded-md border border-l-4 border-border bg-muted/10 p-3"
+            style={{ borderLeftColor: PRIORITY_COLOR[output.priority] ?? '#64748b' }}
+        >
+            <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold tracking-wide text-foreground/55">{output.key}</span>
+                <div className="flex gap-1">
+                    <Pill label={output.type} />
+                    <Pill label={output.priority} tone="accent" />
+                </div>
+            </div>
+            <div className="mt-1 text-sm font-semibold">{output.title}</div>
+            <div className="mt-1 text-[11px] leading-snug text-foreground/70">
+                <span>{output.description}</span>
+                <LlmTag />
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-2 text-[11px] text-foreground/50">
+                <span className="flex items-center gap-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted/50 text-[9px] font-bold text-foreground/60">
+                        {output.reporter[0]?.toUpperCase()}
+                    </span>
+                    {output.reporter}
+                </span>
+                <div className="flex items-center gap-2">
+                    <span className="rounded bg-muted/40 px-1.5 py-0.5 font-semibold">{output.points} pts</span>
+                    <Pill label={output.status} tone={statusTone(output.status)} />
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -501,8 +737,16 @@ function PdfPage({ output }: { output: Extract<SampleOutput, { kind: 'pdf' }> })
 
 function SampleView({ output }: { output: SampleOutput }) {
     switch (output.kind) {
-        case 'record':
-            return <RecordView output={output} />;
+        case 'boarding-pass':
+            return <BoardingPass output={output} />;
+        case 'badge':
+            return <BadgeCard output={output} />;
+        case 'invoice':
+            return <InvoiceSlip output={output} />;
+        case 'order':
+            return <OrderSlip output={output} />;
+        case 'ticket-card':
+            return <TicketCard output={output} />;
         case 'conversation':
             return (
                 <div className="flex flex-col gap-2">

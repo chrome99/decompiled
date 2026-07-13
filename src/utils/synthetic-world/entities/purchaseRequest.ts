@@ -1,5 +1,3 @@
-// 7. Purchase request or invoice — finance / procurement.
-
 import type { EntityDefinition } from '../types';
 
 export const purchaseRequest: EntityDefinition = {
@@ -22,9 +20,10 @@ export const purchaseRequest: EntityDefinition = {
             values: ['Engineering', 'Marketing', 'People Ops', 'Sales', 'Facilities'],
         },
         {
+            // Kept broad so any vendor/category pairing reads plausibly.
             key: 'vendor',
             label: 'Vendor',
-            values: ['a cloud provider', 'a co-working space', 'a design tool vendor', 'an office supplier', 'a boutique agency', 'a catering service'],
+            values: ['a SaaS vendor', 'a cloud provider', 'a design agency', 'a hardware reseller', 'an office supplier', 'a consultancy'],
         },
         {
             key: 'amount',
@@ -44,7 +43,7 @@ export const purchaseRequest: EntityDefinition = {
         {
             key: 'category',
             label: 'Category',
-            values: ['software', 'office space', 'contractor', 'cloud infra', 'supplies', 'travel'],
+            values: ['software', 'cloud infra', 'services', 'equipment', 'supplies', 'consulting'],
         },
     ],
     buildTrace: () => [
@@ -52,16 +51,13 @@ export const purchaseRequest: EntityDefinition = {
         { kind: 'code', text: 'record = build.purchase_request(decisions)' },
     ],
     buildSample: (m) => ({
-        kind: 'record',
-        fields: {
-            prNumber: `PR-${(m.vendor.charCodeAt(0) + m.amount.length).toString().padStart(4, '0')}`,
-            requester: `${m.requester} · ${m.department}`,
-            vendor: m.vendor,
-            amount: m.amount,
-            category: m.category,
-            urgency: m.urgency,
-            approval: m.approvalState,
-            needsFinance: m.approvalState === 'pending finance' || m.approvalState === 'pending manager' ? 'yes' : 'no',
-        },
+        kind: 'invoice',
+        number: `PR-${(m.vendor.charCodeAt(0) + m.amount.length).toString().padStart(4, '0')}`,
+        requester: `${m.requester} · ${m.department}`,
+        vendor: m.vendor,
+        lineItem: `${m.category} (${m.urgency})`,
+        amount: m.amount,
+        category: m.category,
+        approval: m.approvalState,
     }),
 };

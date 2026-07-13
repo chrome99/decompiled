@@ -1,20 +1,16 @@
-// 3. Team chat thread — communication. LLM multi-turn: a dialogue can't be
-// templated, so it's generated turn by turn, each prompt built from the running
-// history. The "model" here is stubbed with deterministic templates, but the
-// bouncing structure — prompt → reply → feed forward → prompt — is real.
+// The bounce is the point: each turn's prompt is built from the running history,
+// so the prompts visibly quote prior replies. The "model" is stubbed with
+// deterministic templates, but the loop structure is real.
 
 import type { EntityDefinition, Modifiers, TraceBlock } from '../types';
 
 type Turn = { speaker: string; template: string; reply: string };
 
-/** Split "Priya & Dana" into ["Priya", "Dana"]. */
 function speakers(m: Modifiers): [string, string] {
     const [a, b] = m.participants.split(' & ');
     return [a ?? 'A', b ?? 'B'];
 }
 
-// The stand-in for the model. In a real pipeline each of these is an LLM call;
-// here they're deterministic so the demo reproduces, but they read like replies.
 function reply(intent: 'open' | 'respond' | 'resolve', m: Modifiers): string {
     const [, b] = speakers(m);
     if (intent === 'open') {

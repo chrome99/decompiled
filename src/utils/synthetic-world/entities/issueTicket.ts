@@ -1,7 +1,3 @@
-// 9. Issue tracker ticket — work management. Hybrid: the metadata (type,
-// priority, status, points) is pure code; only the human-written description
-// comes from a single model call.
-
 import type { EntityDefinition, Modifiers } from '../types';
 
 function ticketKey(m: Modifiers): string {
@@ -9,8 +5,7 @@ function ticketKey(m: Modifiers): string {
     return `${m.component.slice(0, 3).toUpperCase()}-${(n + 100).toString()}`;
 }
 
-// Stand-in for the model: a short description. In a real pipeline this is the
-// one LLM call; the rest of the ticket is assembled in code.
+// The one field a model writes; deterministic here so the demo reproduces.
 function writeDescription(m: Modifiers): string {
     const verb = m.issueType === 'bug' ? 'is broken' : m.issueType === 'feature' ? 'is missing' : 'needs work';
     return `The ${m.component} ${verb}. Reported by ${m.reporter}; severity ${m.priority}. Needs attention this ${m.sprint === 'the backlog' ? 'quarter' : 'sprint'}.`;
@@ -73,18 +68,14 @@ export const issueTicket: EntityDefinition = {
         { kind: 'code', text: 'ticket.description = model(desc_prompt)', accent: true },
     ],
     buildSample: (m) => ({
-        kind: 'record',
-        fields: {
-            ticket: ticketKey(m),
-            type: m.issueType,
-            priority: m.priority,
-            component: m.component,
-            reporter: m.reporter,
-            status: m.status,
-            sprint: m.sprint,
-            points: m.storyPoints,
-            description: writeDescription(m),
-        },
-        llmFields: ['description'],
+        kind: 'ticket-card',
+        key: ticketKey(m),
+        title: `${m.issueType === 'bug' ? 'Fix' : m.issueType === 'feature' ? 'Add' : 'Handle'} ${m.component}`,
+        type: m.issueType,
+        priority: m.priority,
+        status: m.status,
+        points: m.storyPoints,
+        reporter: m.reporter,
+        description: writeDescription(m),
     }),
 };

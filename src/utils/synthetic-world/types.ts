@@ -34,12 +34,11 @@ export type Strategy = 'deterministic' | 'pdf' | 'hybrid' | 'image-model' | 'llm
 
 /**
  * The realistic sample built from a set of modifiers, a discriminated union so
- * each entity renders in its native shape — the post's "different windows into
- * one world" idea. `record.llmFields` marks which fields (if any) came from a
- * model, so hybrids can call that out.
+ * each entity renders as the actual artifact it would be — a boarding pass, an
+ * ID badge, an invoice — not a generic key/value dump. `llm` on the hybrids
+ * names the one field a model wrote.
  */
 export type SampleOutput =
-    | { kind: 'record'; fields: Record<string, string | number>; llmFields?: string[] }
     | { kind: 'log'; lines: string[] }
     | { kind: 'conversation'; messages: { author: string; text: string }[] }
     | { kind: 'image'; caption: string; tags: string[]; gradient: [string, string, string] }
@@ -50,6 +49,62 @@ export type SampleOutput =
           meta: string;
           sections: { heading: string; lines: string[] }[];
           footer: string;
+      }
+    | {
+          kind: 'boarding-pass';
+          airline: string;
+          from: string;
+          to: string;
+          flightNo: string;
+          passenger: string;
+          travelerType: string;
+          seat: string;
+          cabin: string;
+          date: string;
+          pnr: string;
+          status: string;
+      }
+    | {
+          kind: 'badge';
+          name: string;
+          title: string;
+          department: string;
+          employeeId: string;
+          location: string;
+          status: string;
+          bio: string;
+      }
+    | {
+          kind: 'invoice';
+          number: string;
+          requester: string;
+          vendor: string;
+          lineItem: string;
+          amount: string;
+          category: string;
+          approval: string;
+      }
+    | {
+          kind: 'order';
+          number: string;
+          item: string;
+          customer: string;
+          payment: string;
+          discount: string;
+          steps: string[];
+          current: number;
+          terminal: string | null;
+      }
+    | {
+          kind: 'ticket-card';
+          key: string;
+          title: string;
+          type: string;
+          priority: string;
+          status: string;
+          points: string;
+          reporter: string;
+          description: string;
       };
 
 /**

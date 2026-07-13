@@ -1,7 +1,3 @@
-// 4. PDF document — productivity. A formatted page is a fixed layout fed the
-// decisions: a deterministic template engine, no model. The "content" is
-// field-derived structure (headings, rows), not prose.
-
 import type { EntityDefinition, Modifiers } from '../types';
 
 function version(m: Modifiers): string {
