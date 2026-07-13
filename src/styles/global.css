@@ -91,9 +91,19 @@ html[data-theme="dark"] {
   width: 0.5em;
   animation: synth-blink 1.05s step-end infinite;
 }
+/* Word-cloud popover entrance. */
+@keyframes synth-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.synth-pop {
+  animation: synth-pop 0.14s ease-out both;
+  transform-origin: top left;
+}
 @media (prefers-reduced-motion: reduce) {
   .synth-in,
-  .synth-flip { animation: none; }
+  .synth-flip,
+  .synth-pop { animation: none; }
   .synth-caret { animation: none; opacity: 1; }
 }
 

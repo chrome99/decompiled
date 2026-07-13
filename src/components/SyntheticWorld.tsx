@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { IconType } from 'react-icons';
 import {
     LuUser,
@@ -13,12 +14,14 @@ import {
     LuArrowLeft,
     LuDices,
     LuChevronRight,
+    LuCloud,
 } from 'react-icons/lu';
 import {
     getEntities,
     generateEntity,
     regenerateEntity,
     type EntityDefinition,
+    type ModifierDef,
     type Modifiers,
     type SampleOutput,
     type Strategy,
@@ -214,12 +217,118 @@ function ValueCell({
     );
 }
 
+// ── The pool cloud: browse (and pick from) every value a decision can take ────
+
+const CLOUD_SIZES = ['text-[11px]', 'text-xs', 'text-[13px]', 'text-sm'];
+
+function PoolCloud({
+    modifier,
+    current,
+    open,
+    onToggle,
+    onPick,
+}: {
+    modifier: ModifierDef;
+    current: string;
+    open: boolean;
+    onToggle: (open: boolean) => void;
+    onPick: (value: string) => void;
+}) {
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const r = btnRef.current?.getBoundingClientRect();
+        if (r) {
+            const width = 260;
+            const margin = 8;
+            const estHeight = Math.min(340, 70 + modifier.values.length * 26);
+            const left = Math.max(margin, Math.min(r.left, window.innerWidth - width - margin));
+            // Open below, but flip above when there isn't room.
+            const top =
+                r.bottom + 6 + estHeight > window.innerHeight - margin
+                    ? Math.max(margin, r.top - 6 - estHeight)
+                    : r.bottom + 6;
+            setPos({ top, left });
+        }
+        const onDoc = (e: MouseEvent) => {
+            if (panelRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
+            onToggle(false);
+        };
+        const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onToggle(false);
+        const onScroll = () => onToggle(false);
+        document.addEventListener('mousedown', onDoc);
+        document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onScroll, true);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onScroll, true);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    return (
+        <>
+            <button
+                ref={btnRef}
+                onClick={() => onToggle(!open)}
+                title={`browse all ${modifier.values.length} ${modifier.label.toLowerCase()} options`}
+                aria-label={`browse ${modifier.label} options`}
+                className={`ml-1 inline-flex translate-y-px transition-colors ${
+                    open ? 'text-accent' : 'text-foreground/25 hover:text-accent'
+                }`}
+            >
+                <LuCloud className="h-3.5 w-3.5" />
+            </button>
+            {open &&
+                pos &&
+                typeof document !== 'undefined' &&
+                createPortal(
+                    <div
+                        ref={panelRef}
+                        style={{ position: 'fixed', top: pos.top, left: pos.left, width: 260 }}
+                        className="synth-pop z-50 rounded-lg border-2 border-border bg-background p-3 font-mono shadow-xl"
+                    >
+                        <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wide text-foreground/50">
+                            <LuCloud className="h-3 w-3" />
+                            {modifier.label} · {modifier.values.length} possible
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            {modifier.values.map((v, i) => {
+                                const isCurrent = v === current;
+                                const size = CLOUD_SIZES[(v.length + i) % CLOUD_SIZES.length];
+                                return (
+                                    <button
+                                        key={v}
+                                        onClick={() => onPick(v)}
+                                        className={`rounded-full px-2 py-0.5 leading-tight transition-colors ${size} ${
+                                            isCurrent
+                                                ? 'bg-accent font-bold text-background'
+                                                : 'bg-muted/30 text-foreground/70 hover:bg-accent/20 hover:text-accent'
+                                        }`}
+                                    >
+                                        {v}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>,
+                    document.body
+                )}
+        </>
+    );
+}
+
 // ── The decisions dict (numbered, aligned, static) ───────────────────────────
 
 function DecisionsDict({
     entity,
     modifiers,
     onCycle,
+    onPick,
     anim,
     baseDelay,
     step,
@@ -227,10 +336,14 @@ function DecisionsDict({
     entity: EntityDefinition;
     modifiers: Modifiers;
     onCycle: (key: string) => void;
+    onPick: (key: string, value: string) => void;
     anim: Anim;
     baseDelay: number;
     step: number;
 }) {
+    // Which decision's pool-cloud is open (at most one at a time).
+    const [openKey, setOpenKey] = useState<string | null>(null);
+
     // Align the value column: pad every `"key":` token to the widest one.
     const labelWidth = Math.max(...entity.modifiers.map((m) => m.key.length)) + 3;
 
@@ -301,6 +414,16 @@ function DecisionsDict({
                     <>
                         {'    '}
                         <span className="text-foreground/55">{label}</span>
+                        <PoolCloud
+                            modifier={m}
+                            current={modifiers[m.key]}
+                            open={openKey === m.key}
+                            onToggle={(o) => setOpenKey(o ? m.key : null)}
+                            onPick={(v) => {
+                                onPick(m.key, v);
+                                setOpenKey(null);
+                            }}
+                        />
                         {pad}
                         <ValueCell
                             value={modifiers[m.key]}
@@ -832,6 +955,13 @@ function EntityDetail({ entity, onBack }: { entity: EntityDefinition; onBack: ()
         setAnim((a) => ({ type: 'cycle', id: a.id + 1, key }));
     }
 
+    // Jump a decision straight to a chosen value (from the pool cloud).
+    function pickModifier(key: string, value: string) {
+        if (modifiers[key] === value) return;
+        setModifiers({ ...modifiers, [key]: value });
+        setAnim((a) => ({ type: 'cycle', id: a.id + 1, key }));
+    }
+
     // On a single-value cycle the pipeline doesn't re-stream, so pulse the sample
     // block to show the change propagated all the way through.
     useEffect(() => {
@@ -890,6 +1020,7 @@ function EntityDetail({ entity, onBack }: { entity: EntityDefinition; onBack: ()
                 entity={entity}
                 modifiers={modifiers}
                 onCycle={cycleModifier}
+                onPick={pickModifier}
                 anim={anim}
                 baseDelay={80}
                 step={step}
